@@ -11,13 +11,13 @@ import sys
 class Step(object):
     def __init__(self, name, depends=None):
         self.name = name
+        self.depends = depends
         self.attempts = 0
 
 
 class SimpleCommandStep(Step):
     def __init__(self, name, command, depends=None):
         super(SimpleCommandStep, self).__init__(name, depends)
-        self.depends = depends
         self.command = command
 
     def __str__(self):
