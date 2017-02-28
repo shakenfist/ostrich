@@ -3,6 +3,7 @@
 # An openstack ansible install runner
 
 
+import os
 import subprocess
 import sys
 
@@ -58,6 +59,16 @@ class QuestionStep(Step):
         return input('%s >> ' % self.prompt)
 
 
+class EnforceScreenStep(Step):
+    def __init__(self):
+        super(EnforceScreenStep, self).__init__('enforce-screen')
+
+    def run(self):
+        if os.environ['TERM'] != 'screen':
+            print 'Only run ostrich in a screen session please'
+            sys.exit(1)
+
+
 class Runner(object):
     def __init__(self):
         self.steps = {}
@@ -99,6 +110,9 @@ class Runner(object):
 
 if __name__ == '__main__':
     r = Runner()
+
+    # We really like screen around here
+    r.load_step(EnforceScreenStep())
 
     # git proxies
     r.load_dependancy_chain(
