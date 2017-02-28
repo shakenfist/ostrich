@@ -42,6 +42,22 @@ class SimpleCommandStep(Step):
         return returncode == 0
 
 
+class QuestionStep(Step):
+    def __init__(self, name, title, helpful, prompt, depends=None):
+        super(QuestionStep, self).__init__(name, depends)
+        self.title = title
+        self.help = helpful
+        self.prompt = prompt
+        
+    def run(self):
+        print self.title
+        print '=' * len(self.title)
+        print
+        print self.help
+        print
+        return input('%s >> ' % self.prompt)
+
+
 class Runner(object):
     def __init__(self):
         self.steps = {}
@@ -72,8 +88,9 @@ class Runner(object):
 
                 if not depends or self.complete.get(step.depends, False):
                     run.append(step_name)
-                    if step.run():
-                        self.complete[step_name] = True
+                    outcome = step.run()
+                    if outcome:
+                        self.complete[step_name] = outcome
                         complete.append(step_name)
 
             for step_name in complete:
@@ -82,6 +99,17 @@ class Runner(object):
 
 if __name__ == '__main__':
     r = Runner()
+
+    # git proxies
+    r.load_dependancy_chain(
+        [QuestionStep('git-mirror-github',
+                      'Are you running a local github.com mirror?',
+                      'Mirroring github.com speeds up setup on slow and unreliable networks, but means that you have to maintain a mirror somewhere on your corporate network. If you are unsure, just enter a blank line here. Otherwise, we need an answer in the form of <protocol>://<server>, for example git://gitmirror.example.com',
+                      'Mirror URL'),
+         QuestionStep('git-mirror-openstack',
+                      'Are you running a local git.openstack.org mirror?',
+                      'Mirroring git.openstack.org speeds up setup on slow and unreliable networks, but means that you have to maintain a mirror somewhere on your corporate network. If you are unsure, just enter a blank line here. Otherwise, we need an answer in the form of <protocol>://<server>, for example git://gitmirror.example.com',
+                      'Mirror URL')])
 
     # APT commands
     r.load_dependancy_chain(
