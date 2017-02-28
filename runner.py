@@ -64,7 +64,7 @@ class EnforceScreenStep(Step):
         super(EnforceScreenStep, self).__init__('enforce-screen')
 
     def run(self):
-        if os.environ['TERM'] != 'screen':
+        if not os.environ['TERM'].startswith('screen'):
             print 'Only run ostrich in a screen session please'
             sys.exit(1)
 
