@@ -310,8 +310,8 @@ def main(screen):
     kwargs = {'cwd': '/opt/openstack-ansible',
               'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone'}}
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
-         kwargs[env].update({'http_proxy': r.complete['http-proxy'],
-                             'https_proxy': r.complete['http-proxy']})
+         kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
+                               'https_proxy': r.complete['http-proxy']})
     r.load_dependancy_chain(
          [SimpleCommandStep('git-checkout-osa', 'git checkout %s' % r.complete['osa-branch'], **kwargs),
           SimpleCommandStep('fixup-add-ironic', 'sed -i -e "/- name: heat.yml.aio/ a \        - name: ironic.yml.aio"  tests/bootstrap-aio.yml', **kwargs),
