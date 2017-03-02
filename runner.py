@@ -127,11 +127,9 @@ class RegexpEditorStep(Step):
 class Emitter(object):
     def __init__(self, output):
         self.output = output
-        self.lines = 1
         self.logfile = None
 
     def clear(self):
-	self.lines = 1
 	self.output.clear()
 
     def logger(self, logfile):
@@ -149,30 +147,27 @@ class Emitter(object):
                 self.logfile.write('%s %s\n' %(datetime.datetime.now(), line))
                 self.logfile.flush()
 
-            if len(line) < 1:
-                self.lines += 1
-
             for l in textwrap.wrap(line, width - 3):
                 if len(l) > 0:
-                    if self.lines > height - 2:
-                        self.output.scroll()
-                        self.output.addstr(height - 2, 1, ' ' * (width - 1))
+                    self.output.scroll()
+                    self.output.addstr(height - 2, 1, ' ' * (width - 1))
 
                     try:
-                        self.output.addstr(min(self.lines, height - 2), 2, l)
+                        self.output.addstr(height - 2, 2, l)
                     except Exception as e:
                         print 'Exception: %s' % e
                         print '>>%s<<' % line
                         sys.exit(1)
-                self.lines += 1
 
         self.output.border()
         self.output.refresh()
 
     def getstr(self, s):
+        height, width = self.output.getmaxyx()
+
         self.emit(s)
         curses.echo()
-        answer = self.output.getstr(self.lines - 1, len(s) + 2)
+        answer = self.output.getstr(height - 2, len(s) + 2)
         curses.noecho()
         return answer
 
