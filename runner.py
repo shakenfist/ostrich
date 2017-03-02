@@ -110,14 +110,21 @@ class RegexpEditorStep(Step):
         output = []
         changes = 0
 
+        emit.emit('--- %s' % self.path)
+        emit.emit('+++ %s' % self.path)
+
         with open(self.path, 'r') as f:
             for line in f.readlines():
                 line = line.rstrip()
                 newline = re.sub(self.search, self.replace, line)
-                emit.emit(newline)
                 output.append(newline)
+
                 if newline != line:
+                    emit.emit('- %s' % line)
+                    emit.emit('+ %s' % newline)
                     changes += 1
+                else:
+                    emit.emit('  %s' % line)
 
         with open(self.path, 'w') as f:
             f.write('\n'.join(output))
