@@ -95,6 +95,35 @@ class EnforceScreenStep(Step):
         return True
 
 
+class RegexpEditorStep(Step):
+    def __init__(self, name, path, search, replace, cwd=None, env=None):
+        super(RegexpEditorStep, self).__init__(name)
+        self.path = path
+        if cwd:
+            self.path = os.path.join(cwd, path)
+
+        self.search = search
+        self.replace = replace
+
+    def run(self, emit, screen):
+        output = []
+        changes = 0
+
+        with open(self.path, 'r') as f:
+            for line in f.readlines():
+                line = line.rstrip()
+                newline = re.sub(self.search, self.replace, line)
+                emit.emit(newline)
+                output.append(newline)
+                if newline != line:
+                    changes += 1
+
+        with open(self.path, 'w') as f:
+            f.write('\n'.join(output))
+
+        return 'Changed %d lines' % changes
+
+
 class Emitter(object):
     def __init__(self, output):
         self.output = output
@@ -111,8 +140,7 @@ class Emitter(object):
         self.logfile = open(os.path.expanduser('~/.ostrich/%s' % logfile), 'w')
 
     def emit(self, s):
-        _, width = self.output.getmaxyx()
-        width -= 6
+        height, width = self.output.getmaxyx()
 
         for line in s.split('\n'):
             line = ''.join([i if ord(i) < 128 else ' ' for i in line])
@@ -124,10 +152,14 @@ class Emitter(object):
             if len(line) < 1:
                 self.lines += 1
 
-            for l in textwrap.wrap(line, width):
+            for l in textwrap.wrap(line, width - 3):
                 if len(l) > 0:
+                    if self.lines > height - 2:
+                        self.output.scroll()
+                        self.output.addstr(height - 2, 1, ' ' * (width - 1))
+
                     try:
-                        self.output.addstr(self.lines, 2, l)
+                        self.output.addstr(min(self.lines, height - 2), 2, l)
                     except Exception as e:
                         print 'Exception: %s' % e
                         print '>>%s<<' % line
@@ -272,6 +304,19 @@ def main(screen):
          [SimpleCommandStep('git-checkout-osa', 'git checkout %s' % r.complete['osa-branch'], **kwargs),
           SimpleCommandStep('fixup-add-ironic', 'sed -i -e "/- name: heat.yml.aio/ a \        - name: ironic.yml.aio"  tests/bootstrap-aio.yml', **kwargs),
           SimpleCommandStep('fixup-virt-ironic', 'echo "nova_virt_type: ironic" >> etc/openstack_deploy/user_variables.yml', **kwargs),
+          RegexpEditorStep('ansible-role-assignments-github-mirror', 'ansible-role-requirements.yml',
+                           '(http|https|git)://github.com', r.complete['git-mirror-github'], **kwargs),
+          RegexpEditorStep('ansible-role-assignments-openstack-mirror', 'ansible-role-requirements.yml',
+                           '(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'], **kwargs),
+          RegexpEditorStep('ansible-no-loopback-swap', '/opt/openstack-ansible/tests/roles/bootstrap-host/tasks/prepare_loopback_swap.yml',
+                           'command: grep /openstack/swap.img /proc/swaps', 'command: true', **kwargs),
+          SimpleCommandStep('bootstrap-ansible', './scripts/bootstrap-ansible.sh', **kwargs),
+          SimpleCommandStep('bootstrap-aio', './scripts/bootstrap-aio.sh', **kwargs),
+          ])
+
+    kwargs['cwd'] = os.path.join(kwargs['cwd'], 'playbooks')
+    r.load_dependancy_chain(
+         [SimpleCommandStep('bootstrap-setup-everything', 'openstack-ansible setup-everything.yml', **kwargs),
           ])
 
     # Do the more things
