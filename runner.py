@@ -262,17 +262,19 @@ def main(screen):
     r = Runner(screen)
 
     # We really like screen around here
+    r.load_step(SimpleCommandStep('apt-daily', 'while [ `ps -ef | grep apt.systemd.daily | grep -vc "grep"` -gt 0 ]; do   echo "Waiting for daily apt run to end";   sleep 10; done'))
     r.load_step(EnforceScreenStep())
+    r.resolve_steps()
 
     # git proxies
     r.load_dependancy_chain(
         [QuestionStep('git-mirror-github',
                       'Are you running a local github.com mirror?',
-                      'Mirroring github.com speeds up setup on slow and unreliable networks, but means that you have to maintain a mirror somewhere on your corporate network. If you are unsure, just enter a blank line here. Otherwise, we need an answer in the form of <protocol>://<server>, for example git://gitmirror.example.com',
+                      'Mirroring github.com speeds up setup on slow and unreliable networks, but means that you have to maintain a mirror somewhere on your corporate network. If you are unsure, just enter "git://github.com" here. Otherwise, we need an answer in the form of <protocol>://<server>, for example git://gitmirror.example.com',
                       'Mirror URL'),
          QuestionStep('git-mirror-openstack',
                       'Are you running a local git.openstack.org mirror?',
-                      'Mirroring git.openstack.org speeds up setup on slow and unreliable networks, but means that you have to maintain a mirror somewhere on your corporate network. If you are unsure, just enter a blank line here. Otherwise, we need an answer in the form of <protocol>://<server>, for example git://gitmirror.example.com',
+                      'Mirroring git.openstack.org speeds up setup on slow and unreliable networks, but means that you have to maintain a mirror somewhere on your corporate network. If you are unsure, just enter "git://git.openstack.org" here. Otherwise, we need an answer in the form of <protocol>://<server>, for example git://gitmirror.example.com',
                       'Mirror URL'),
          QuestionStep('osa-branch',
                       'What OSA branch (or commit SHA) would you like to use?',
@@ -310,6 +312,8 @@ def main(screen):
                            '(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'], **kwargs),
           RegexpEditorStep('ansible-no-loopback-swap', '/opt/openstack-ansible/tests/roles/bootstrap-host/tasks/prepare_loopback_swap.yml',
                            'command: grep /openstack/swap.img /proc/swaps', 'command: /bin/true', **kwargs),
+          RegexpEditorStep('ansible-from-mirror', '/opt/openstack-ansible/scripts/bootstrap-ansible.sh',
+                           'https://github.com/ansible/ansible', '%s/ansible/ansible' % r.complete['git-mirror-github']),
           SimpleCommandStep('bootstrap-ansible', './scripts/bootstrap-ansible.sh', **kwargs),
           SimpleCommandStep('bootstrap-aio', './scripts/bootstrap-aio.sh', **kwargs),
           ],
