@@ -326,8 +326,9 @@ def main(screen):
         depends='git-clone-osa')
 
     # We also need to re-write git repos in a large number of roles
-    for _, _, files in os.walk('/etc/ansible'):
-        for path in files:
+    for root, _, files in os.walk('/etc/ansible'):
+        for filename in files:
+            path = os.path.join(root, filename)
             if path.endswith('ansible-role-requirements.yml'):
                 r.add_step(RegexpEditorStep('%s-github-mirror' % path, path,
                                             '(http|https|git)://github.com', r.complete['git-mirror-github'], **kwargs))
