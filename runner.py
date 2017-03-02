@@ -99,10 +99,16 @@ class Emitter(object):
     def __init__(self, output):
         self.output = output
         self.lines = 1
+        self.logfile = None
 
     def clear(self):
 	self.lines = 1
 	self.output.clear()
+
+    def logger(self, logfile):
+        if self.logfile:
+            self.logfile.close()
+        self.logfile = open(os.path.expanduser('~/.ostrich/%s' % logfile), 'w')
 
     def emit(self, s):
         _, width = self.output.getmaxyx()
@@ -110,6 +116,11 @@ class Emitter(object):
 
         for line in s.split('\n'):
             line = ''.join([i if ord(i) < 128 else ' ' for i in line])
+
+            if self.logfile:
+                self.logfile.write('%s %s\n' %(datetime.datetime.now(), line))
+                self.logfile.flush()
+
             if len(line) < 1:
                 self.lines += 1
 
@@ -145,9 +156,12 @@ class Runner(object):
             os.mkdir(os.path.expanduser('~/.ostrich'))
 
         self.complete = {}
+        self.counter = 0
         if os.path.exists(self.state_path):
             with open(self.state_path, 'r') as f:
-                self.complete = json.loads(f.read())
+                state = json.loads(f.read())
+                self.complete = state.get('complete', {})
+                self.counter = state.get('counter', 0)
 
     def load_step(self, step):
         self.steps[step.name] = step
@@ -194,14 +208,18 @@ class Runner(object):
 
                     run.append(step_name)
                     emitter.clear()
+                    emitter.logger('%06d-%s' %(self.counter, step_name))
                     outcome = step.run(emitter, self.screen)
+                    self.counter += 1
 
                     if outcome:
                         self.complete[step_name] = outcome
                         complete.append(step_name)
 
-                        with open(self.state_path, 'w') as f:
-                            f.write(json.dumps(self.complete, indent=4, sort_keys=True))
+                    with open(self.state_path, 'w') as f:
+                        f.write(json.dumps({'complete': self.complete,
+                                            'counter': self.counter},
+                                           indent=4, sort_keys=True))
 
             for step_name in complete:
                 del self.steps[step_name]
@@ -251,8 +269,10 @@ def main(screen):
     kwargs = {'cwd': '/opt/openstack-ansible',
               'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone'}}
     r.load_dependancy_chain(
-         SimpleCommandStep('git-checkout-osa', 'git checkout %s' % r.complete['osa-branch'], **kwargs),
-         ])
+         [SimpleCommandStep('git-checkout-osa', 'git checkout %s' % r.complete['osa-branch'], **kwargs),
+          SimpleCommandStep('fixup-add-ironic', 'sed -i -e "/- name: heat.yml.aio/ a \        - name: ironic.yml.aio"  tests/bootstrap-aio.yml', **kwargs),
+          SimpleCommandStep('fixup-virt-ironic', 'echo "nova_virt_type: ironic" >> etc/openstack_deploy/user_variables.yml', **kwargs),
+          ])
 
     # Do the more things
     r.resolve_steps()
