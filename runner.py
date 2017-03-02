@@ -17,15 +17,16 @@ import time
 
 
 class Step(object):
-    def __init__(self, name, depends=None):
+    def __init__(self, name, depends=None, max_attempts=5):
         self.name = name
         self.depends = depends
         self.attempts = 0
+        self.max_attempts = 5
 
 
 class SimpleCommandStep(Step):
-    def __init__(self, name, command, depends=None, cwd=None, env=None):
-        super(SimpleCommandStep, self).__init__(name, depends)
+    def __init__(self, name, command, depends=None, cwd=None, env=None, max_attempts=5):
+        super(SimpleCommandStep, self).__init__(name, depends=depends, max_attempts=max_attempts)
         self.command = command
         self.cwd = cwd
 
@@ -40,7 +41,7 @@ class SimpleCommandStep(Step):
         emit.emit('# %s\n' % self.command)
         self.attempts += 1
 
-        if self.attempts > 5:
+        if self.attempts > self.max_attempts:
             emit.emit('... repeatedly failed step, giving up')
             sys.exit(1)
 
@@ -333,6 +334,7 @@ def main(screen):
     r.resolve_steps()
 
     kwargs['cwd'] = os.path.join(kwargs['cwd'], 'playbooks')
+    kwargs['max_attempts'] = 1
     r.load_dependancy_chain(
          [SimpleCommandStep('bootstrap-setup-everything', 'openstack-ansible setup-everything.yml', **kwargs),
           ],
