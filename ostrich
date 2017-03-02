@@ -349,7 +349,7 @@ def main(screen):
     kwargs['cwd'] = os.path.join(kwargs['cwd'], 'playbooks')
     kwargs['max_attempts'] = 1
     r.load_dependancy_chain(
-         [SimpleCommandStep('bootstrap-setup-everything', 'openstack-ansible setup-everything.yml', **kwargs),
+         [SimpleCommandStep('bootstrap-run-playbooks', './scripts/run-playbooks.sh', **kwargs),
           ],
         depends='bootstrap-aio')
 
