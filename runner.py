@@ -324,11 +324,12 @@ def main(screen):
     for root, _, files in os.walk('/etc/ansible'):
         for filename in files:
             path = os.path.join(root, filename)
+            jobpath = path.replace('.yml', '').replace('/', '_')
             if path.endswith('ansible-role-requirements.yml'):
-                r.add_step(RegexpEditorStep('%s-github-mirror' % path, path,
-                                            '(http|https|git)://github.com', r.complete['git-mirror-github'], **kwargs))
-                r.add_step(RegexpEditorStep('%s-openstack-mirror' % path, path,
-                                            '(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'], **kwargs))
+                r.load_step(RegexpEditorStep('%s-github-mirror' % jobpath, path,
+                                             '(http|https|git)://github.com', r.complete['git-mirror-github'], **kwargs))
+                r.load_step(RegexpEditorStep('%s-openstack-mirror' % jobpath, path,
+                                             '(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'], **kwargs))
     r.resolve_steps()
 
     kwargs['cwd'] = os.path.join(kwargs['cwd'], 'playbooks')
