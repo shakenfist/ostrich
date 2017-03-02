@@ -285,7 +285,7 @@ def main(screen):
                       'OSA branch'),
          QuestionStep('http-proxy',
                       'Are you running a local http proxy?',
-                      'OSA will download large objects such as LXC base images. If you have a slow network, or are on a corporate network which requires a proxy, configure it here with a URL like http://cache.example.com:3128',
+                      'OSA will download large objects such as LXC base images. If you have a slow network, or are on a corporate network which requires a proxy, configure it here with a URL like http://cache.example.com:3128 . If you do not use a proxy, please enter "none" here.',
                       'HTTP Proxy'),
          ])
 
@@ -308,9 +308,10 @@ def main(screen):
 
     # Steps where we now have the OSA checkout
     kwargs = {'cwd': '/opt/openstack-ansible',
-              'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
-                      'http_proxy': r.complete['http-proxy'],
-                      'https_proxy': r.complete['http-proxy']}}
+              'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone'}}
+    if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
+         kwargs[env].update({'http_proxy': r.complete['http-proxy'],
+                             'https_proxy': r.complete['http-proxy']})
     r.load_dependancy_chain(
          [SimpleCommandStep('git-checkout-osa', 'git checkout %s' % r.complete['osa-branch'], **kwargs),
           SimpleCommandStep('fixup-add-ironic', 'sed -i -e "/- name: heat.yml.aio/ a \        - name: ironic.yml.aio"  tests/bootstrap-aio.yml', **kwargs),
