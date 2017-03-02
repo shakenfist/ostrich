@@ -309,15 +309,17 @@ def main(screen):
           RegexpEditorStep('ansible-role-assignments-openstack-mirror', 'ansible-role-requirements.yml',
                            '(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'], **kwargs),
           RegexpEditorStep('ansible-no-loopback-swap', '/opt/openstack-ansible/tests/roles/bootstrap-host/tasks/prepare_loopback_swap.yml',
-                           'command: grep /openstack/swap.img /proc/swaps', 'command: true', **kwargs),
+                           'command: grep /openstack/swap.img /proc/swaps', 'command: /bin/true', **kwargs),
           SimpleCommandStep('bootstrap-ansible', './scripts/bootstrap-ansible.sh', **kwargs),
           SimpleCommandStep('bootstrap-aio', './scripts/bootstrap-aio.sh', **kwargs),
-          ])
+          ],
+        depends='git-clone-osa')
 
     kwargs['cwd'] = os.path.join(kwargs['cwd'], 'playbooks')
     r.load_dependancy_chain(
          [SimpleCommandStep('bootstrap-setup-everything', 'openstack-ansible setup-everything.yml', **kwargs),
-          ])
+          ],
+        depends='bootstrap-aio')
 
     # Do the more things
     r.resolve_steps()
