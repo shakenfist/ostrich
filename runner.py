@@ -279,7 +279,11 @@ def main(screen):
          QuestionStep('osa-branch',
                       'What OSA branch (or commit SHA) would you like to use?',
                       'Use stable/newton unless you know what you are doing.',
-                      'OSA branch')
+                      'OSA branch'),
+         QuestionStep('http-proxy',
+                      'Are you running a local http proxy?',
+                      'OSA will download large objects such as LXC base images. If you have a slow network, or are on a corporate network which requires a proxy, configure it here with a URL like http://cache.example.com:3128',
+                      'HTTP Proxy'),
          ])
 
     # APT commands
@@ -301,7 +305,9 @@ def main(screen):
 
     # Steps where we now have the OSA checkout
     kwargs = {'cwd': '/opt/openstack-ansible',
-              'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone'}}
+              'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
+                      'http_proxy': r.complete['http-proxy'],
+                      'https_proxy': r.complete['http-proxy']}}
     r.load_dependancy_chain(
          [SimpleCommandStep('git-checkout-osa', 'git checkout %s' % r.complete['osa-branch'], **kwargs),
           SimpleCommandStep('fixup-add-ironic', 'sed -i -e "/- name: heat.yml.aio/ a \        - name: ironic.yml.aio"  tests/bootstrap-aio.yml', **kwargs),
@@ -318,6 +324,16 @@ def main(screen):
           SimpleCommandStep('bootstrap-aio', './scripts/bootstrap-aio.sh', **kwargs),
           ],
         depends='git-clone-osa')
+
+    # We also need to re-write git repos in a large number of roles
+    for _, _, files in os.walk('/etc/ansible'):
+        for path in files:
+            if path.endswith('ansible-role-requirements.yml'):
+                r.add_step(RegexpEditorStep('%s-github-mirror' % path, path,
+                                            '(http|https|git)://github.com', r.complete['git-mirror-github'], **kwargs))
+                r.add_step(RegexpEditorStep('%s-openstack-mirror' % path, path,
+                                            '(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'], **kwargs))
+    r.resolve_steps()
 
     kwargs['cwd'] = os.path.join(kwargs['cwd'], 'playbooks')
     r.load_dependancy_chain(
