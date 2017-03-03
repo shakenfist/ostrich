@@ -329,7 +329,7 @@ def main(screen):
                            'https://github.com/ansible/ansible', '%s/ansible/ansible' % r.complete['git-mirror-github']),
           SimpleCommandStep('bootstrap-ansible', './scripts/bootstrap-ansible.sh', **kwargs),
           RegexpEditorStep('lxc-cachable-downloads', '/usr/share/lxc/templates/lxc-download',
-                           'wget_wrapper -T 30 -q https://', 'wget_wrapper -T 30 -q --no-hsts http://'),
+                           'wget_wrapper -T 30 -q https?://', 'wget_wrapper -T 30 -q --no-hsts http://'),
           SimpleCommandStep('bootstrap-aio', './scripts/bootstrap-aio.sh', **kwargs),
           ],
         depends='git-clone-osa')
