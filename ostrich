@@ -328,7 +328,7 @@ def main(screen):
         for filename in files:
             path = os.path.join(root, filename)
             jobpath = path.replace('.yml', '').replace('/', '_')
-            if path.endswith('ansible-role-requirements.yml'):
+            if path.endswith('.yml'):
                 r.load_step(RegexpEditorStep('%s-github-mirror' % jobpath, path,
                                              '(http|https|git)://github.com', r.complete['git-mirror-github'], **kwargs))
                 r.load_step(RegexpEditorStep('%s-openstack-mirror' % jobpath, path,
