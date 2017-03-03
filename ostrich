@@ -316,8 +316,9 @@ def main(screen):
           RegexpEditorStep('ansible-from-mirror', '/opt/openstack-ansible/scripts/bootstrap-ansible.sh',
                            'https://github.com/ansible/ansible', '%s/ansible/ansible' % r.complete['git-mirror-github']),
           SimpleCommandStep('bootstrap-ansible', './scripts/bootstrap-ansible.sh', **kwargs),
+          SimpleCommandStep('lxc-install', 'apt-get install lxc', **kwargs),
           RegexpEditorStep('lxc-cachable-downloads', '/usr/share/lxc/templates/lxc-download',
-                           'wget_wrapper -T 30 -q https?://', 'wget_wrapper -T 30 -q --no-hsts http://'),
+                           'wget_wrapper -T 30 -q https?://', 'wget_wrapper -T 30 -q --no-hsts http://', **kwargs),
           SimpleCommandStep('bootstrap-aio', './scripts/bootstrap-aio.sh', **kwargs),
           ],
         depends='git-clone-osa')
