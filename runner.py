@@ -16,6 +16,9 @@ import textwrap
 import time
 
 
+progname = os.path.basename(__file__)
+
+
 class Step(object):
     def __init__(self, name, depends=None, max_attempts=5):
         self.name = name
@@ -143,7 +146,7 @@ class Emitter(object):
     def logger(self, logfile):
         if self.logfile:
             self.logfile.close()
-        self.logfile = open(os.path.expanduser('~/.ostrich/%s' % logfile), 'w')
+        self.logfile = open(os.path.expanduser('~/.%s/%s' % (progname, logfile)), 'w')
 
     def emit(self, s):
         height, width = self.output.getmaxyx()
@@ -186,9 +189,9 @@ class Runner(object):
 
         self.steps = {}
 
-        self.state_path = os.path.expanduser('~/.ostrich/state.json')
-        if not os.path.exists(os.path.expanduser('~/.ostrich')):
-            os.mkdir(os.path.expanduser('~/.ostrich'))
+        self.state_path = os.path.expanduser('~/.%s/state.json' % progname)
+        if not os.path.exists(os.path.expanduser('~/.%s' % progname)):
+            os.mkdir(os.path.expanduser('~/.%s' % progname))
 
         self.complete = {}
         self.counter = 0
