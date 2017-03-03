@@ -80,23 +80,12 @@ class QuestionStep(Step):
         self.title = title
         self.help = helpful
         self.prompt = prompt
-        
+
     def run(self, emit, screen):
         emit.emit('%s' % self.title)
         emit.emit('%s\n' % ('=' * len(self.title)))
         emit.emit('%s\n' % self.help)
         return emit.getstr('>> ')
-
-
-class EnforceScreenStep(Step):
-    def __init__(self):
-        super(EnforceScreenStep, self).__init__('enforce-screen')
-
-    def run(self, emit, screen):
-        if not os.environ['TERM'].startswith('screen'):
-            emit.emit('Only run ostrich in a screen session please')
-            sys.exit(1)
-        return True
 
 
 class RegexpEditorStep(Step):
@@ -269,7 +258,6 @@ def main(screen):
 
     # We really like screen around here
     r.load_step(SimpleCommandStep('apt-daily', 'while [ `ps -ef | grep apt.systemd.daily | grep -vc "grep"` -gt 0 ]; do   echo "Waiting for daily apt run to end";   sleep 10; done'))
-    r.load_step(EnforceScreenStep())
     r.resolve_steps()
 
     # git proxies
@@ -357,4 +345,7 @@ def main(screen):
 
 
 if __name__ == '__main__':
+    if ('TMUX' not in os.environ) and ('STY' not in os.environ):
+        sys.exit('Only run ostrich in a screen or tmux session please')
+
     curses.wrapper(main)
