@@ -346,7 +346,6 @@ def main(screen):
                                              '(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'], **kwargs))
     r.resolve_steps()
 
-    kwargs['cwd'] = os.path.join(kwargs['cwd'], 'playbooks')
     kwargs['max_attempts'] = 1
     r.load_dependancy_chain(
          [SimpleCommandStep('bootstrap-run-playbooks', './scripts/run-playbooks.sh', **kwargs),
