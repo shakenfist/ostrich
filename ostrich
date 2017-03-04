@@ -24,7 +24,7 @@ class Step(object):
     def __init__(self, name, depends=None, max_attempts=5):
         self.name = name
         self.depends = depends
-        self.attempts = 0
+        self.attempts = 1
         self.max_attempts = max_attempts
 
 
@@ -342,6 +342,8 @@ def main(screen):
           RegexpEditorStep('lxc-cachable-downloads', '/usr/share/lxc/templates/lxc-download',
                            'wget_wrapper -T 30 -q https?://', 'wget_wrapper -T 30 -q --no-hsts http://', **kwargs),
           SimpleCommandStep('bootstrap-aio', './scripts/bootstrap-aio.sh', **kwargs),
+          RegexpEditorStep('repo-container-retries', '/etc/ansible/roles/repo_build/tasks/repo_clone_git.yml',
+                           'retries: 360', 'retries: 3600'),
           ],
         depends='git-clone-osa')
 
