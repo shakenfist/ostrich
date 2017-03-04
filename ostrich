@@ -8,6 +8,7 @@ import datetime
 import fcntl
 import json
 import os
+import psutil
 import re
 import select
 import subprocess
@@ -55,6 +56,8 @@ class SimpleCommandStep(Step):
                                shell=True,
                                cwd=self.cwd,
                                env=self.env)
+        proc = psutil.Process(obj.pid)
+        procs = {}
 
         flags = fcntl.fcntl(obj.stdout, fcntl.F_GETFL)
         fcntl.fcntl(obj.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
@@ -67,6 +70,25 @@ class SimpleCommandStep(Step):
             readable, _, _ = select.select([obj.stderr, obj.stdout], [], [], 0)
             for f in readable:
                 emit.emit(os.read(f.fileno(), 10000))
+
+            seen = []
+            for child in proc.children(recursive=True):
+                try:
+                    seen.append(child.pid)
+                    if not child.pid in procs:
+                        procs[child.pid] = ' '.join(child.cmdline())
+                        emit.emit('*** process started *** %d -> %s' %(child.pid, procs[child.pid]))
+                except psutil.NoSuchProcess:
+                    pass
+
+            ended = []
+            for pid in procs:
+                if not pid in seen:
+                    emit.emit('*** process ended *** %d -> %s' %(pid, procs[child.pid]))
+                    ended.append(pid)
+
+            for pid in ended:
+                del procs[pid]
 
         emit.emit('... process complete')
         returncode = obj.returncode
