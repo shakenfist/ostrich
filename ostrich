@@ -84,7 +84,7 @@ class SimpleCommandStep(Step):
             ended = []
             for pid in procs:
                 if not pid in seen:
-                    emit.emit('*** process ended *** %d -> %s' %(pid, procs[child.pid]))
+                    emit.emit('*** process ended *** %d -> %s' %(pid, procs.get(child.pid, '???')))
                     ended.append(pid)
 
             for pid in ended:
