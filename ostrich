@@ -24,7 +24,7 @@ class Step(object):
     def __init__(self, name, depends=None, max_attempts=5):
         self.name = name
         self.depends = depends
-        self.attempts = 1
+        self.attempts = 0
         self.max_attempts = max_attempts
 
 
