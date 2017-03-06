@@ -3,7 +3,7 @@ class NoopEmitter(object):
         self.output = output
 
     def clear(self):
-	pass
+        pass
 
     def logger(self, logfile):
         pass
@@ -21,7 +21,7 @@ class Emitter(NoopEmitter):
         self.logfile = None
 
     def clear(self):
-	self.output.clear()
+        self.output.clear()
 
     def logger(self, logfile):
         if self.logfile:
@@ -36,7 +36,7 @@ class Emitter(NoopEmitter):
             line = ''.join([i if ord(i) < 128 else ' ' for i in line])
 
             if self.logfile:
-                self.logfile.write('%s %s\n' %(datetime.datetime.now(), line))
+                self.logfile.write('%s %s\n' % (datetime.datetime.now(), line))
                 self.logfile.flush()
 
             for l in textwrap.wrap(line, width - 3):
