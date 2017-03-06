@@ -257,7 +257,7 @@ def main(screen):
 
     # We also need to re-write git repos in a large number of roles
     r.load_step(steps.BulkRegexpEditorStep(
-            'apply-git-mirrors', '/etc/ansible', '.*',
+            'apply-git-mirrors', '/etc/ansible', '.*\.yml$',
             [('(http|https|git)://github.com',
               r.complete['git-mirror-github']),
              ('(http|https|git)://git.openstack.org',
