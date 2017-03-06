@@ -269,7 +269,7 @@ def main(screen):
     # The last of the things, run only once
     kwargs['max_attempts'] = 1
     r.load_step(steps.SimpleCommandStep(
-                     'bootstrap-run-playbooks',
+                     'run-playbooks',
                      './scripts/run-playbooks.sh',
                      **kwargs))
     r.resolve_steps()
