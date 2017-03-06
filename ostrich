@@ -3,7 +3,6 @@
 # An openstack ansible install runner
 
 import curses
-import curses.textpad
 import datetime
 import fcntl
 import json
@@ -177,18 +176,14 @@ def main(screen):
         depends='git-clone-osa')
 
     # We also need to re-write git repos in a large number of roles
-    for root, _, files in os.walk('/etc/ansible'):
-        for filename in files:
-            path = os.path.join(root, filename)
-            jobpath = path.replace('.yml', '').replace('/', '_')
-            if path.endswith('.yml'):
-                r.load_step(step.RegexpEditorStep('%s-github-mirror' % jobpath, path,
-                                             '(http|https|git)://github.com', r.complete['git-mirror-github'], **kwargs))
-                r.load_step(step.RegexpEditorStep('%s-openstack-mirror' % jobpath, path,
-                                             '(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'], **kwargs))
-    r.resolve_steps()
+    r.load_step(steps.BulkRegexpEditorStep(
+            'apply-git-mirrors', '/etc/ansible', '.*',
+            [('(http|https|git)://github.com',
+              r.complete['git-mirror-github']),
+             ('(http|https|git)://git.openstack.org',
+              r.complete['git-mirror-openstack'])])
 
-    # The last of the things
+    # The last of the things, run only once
     kwargs['max_attempts'] = 1
     r.load_step(step.SimpleCommandStep('bootstrap-run-playbooks', './scripts/run-playbooks.sh', **kwargs))
     r.resolve_steps()

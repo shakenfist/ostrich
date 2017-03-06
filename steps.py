@@ -1,3 +1,7 @@
+import re
+
+import emitters
+
 class Step(object):
     def __init__(self, name, depends=None, max_attempts=5):
         self.name = name
@@ -126,3 +130,34 @@ class RegexpEditorStep(Step):
             f.write('\n'.join(output))
 
         return 'Changed %d lines' % changes
+
+
+class BulkRegexpEditorStep(Step):
+    def __init__(self, name, path, file_filter, replacements):
+        super(BulkRegexpEditorStep, self).__init__(name)
+        self.path = path
+        if cwd:
+            self.path = os.path.join(cwd, path)
+
+        self.file_filter = re.compile(file_filter)
+        self.replacements = replacements
+
+    def run(self, emit, screen):
+        silent_emitter = emitters.NoopEmitter()
+        changes = 0
+
+        for root, _, files in os.walk(self.path):
+            for filename in files:
+                m = self.file_filter(filename)
+                if not m:
+                    continue
+
+                path = os.path.join(root, filename)
+                for (search, replace) in self.replacements:
+                    s = RegexpEditorStep('bulk-edit', path, search, replace)
+                    result = s.run(silent_emitter, None)
+                    emit.emit('%s -> %s' %(path, result))
+                    if result != 'Changed 0 lines':
+                        changes += 1
+
+        return changes
