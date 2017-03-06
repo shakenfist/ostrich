@@ -156,7 +156,7 @@ class BulkRegexpEditorStep(Step):
         self.replacements = replacements
 
     def run(self, emit, screen):
-        silent_emitter = emitters.NoopEmitter()
+        silent_emitter = emitters.NoopEmitter('noop', None)
         changes = 0
 
         for root, _, files in os.walk(self.path):

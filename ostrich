@@ -61,7 +61,7 @@ class Runner(object):
         output.scrollok(True)
         output.border()
         output.refresh()
-        emitter = emitters.Emitter(output)
+        emitter = emitters.Emitter(progname, output)
 
         for step_name in self.complete:
             if step_name in self.steps:

@@ -12,8 +12,10 @@ import textwrap
 import time
 
 class NoopEmitter(object):
-    def __init__(self, output):
+    def __init__(self, progname, output):
+        self.progname = progname
         self.output = output
+        self.logfile = None
 
     def clear(self):
         pass
@@ -29,10 +31,6 @@ class NoopEmitter(object):
 
 
 class Emitter(NoopEmitter):
-    def __init__(self, output):
-        self.output = output
-        self.logfile = None
-
     def clear(self):
         self.output.clear()
 
@@ -40,7 +38,7 @@ class Emitter(NoopEmitter):
         if self.logfile:
             self.logfile.close()
         self.logfile = open(os.path.expanduser('~/.%s/%s'
-                                               % (progname, logfile)), 'w')
+                                               % (self.progname, logfile)), 'w')
 
     def emit(self, s):
         height, width = self.output.getmaxyx()
