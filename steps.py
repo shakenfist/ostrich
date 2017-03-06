@@ -161,7 +161,7 @@ class BulkRegexpEditorStep(Step):
 
         for root, _, files in os.walk(self.path):
             for filename in files:
-                m = self.file_filter(filename)
+                m = self.file_filter.match(filename)
                 if not m:
                     continue
 
