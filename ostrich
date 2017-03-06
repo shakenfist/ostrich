@@ -255,6 +255,8 @@ def main(screen):
           ],
          depends='git-clone-osa')
 
+    r.resolve_steps()
+
     # We also need to re-write git repos in a large number of roles
     r.load_step(steps.BulkRegexpEditorStep(
             'apply-git-mirrors', '/etc/ansible', '.*\.yml$',
