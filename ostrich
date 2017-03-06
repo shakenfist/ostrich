@@ -259,12 +259,13 @@ def main(screen):
 
     # We also need to re-write git repos in a large number of roles
     r.load_step(steps.BulkRegexpEditorStep(
-            'apply-git-mirrors', '/etc/ansible', '.*\.yml$',
+            'apply-git-mirrors', '/etc/ansible', '.*\.(ini|yml)$',
             [('(http|https|git)://github.com',
               r.complete['git-mirror-github']),
              ('(http|https|git)://git.openstack.org',
               r.complete['git-mirror-openstack'])],
             **kwargs))
+    r.resolve_steps()
 
     # The last of the things, run only once
     kwargs['max_attempts'] = 1
