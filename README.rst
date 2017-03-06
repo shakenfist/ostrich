@@ -28,6 +28,7 @@ Grab the latest version of ostrich:
     $ git clone https://github.com/mikalstill/ostrich.git
 
 Running ostrich
+===============
 
 Ostrich must be run in a screen or tmux session, because it's going to take
 a while, and you might like to go grab a cup of tea while it's doing its
