@@ -183,8 +183,11 @@ def main(screen):
          ])
 
     # Steps where we now have the OSA checkout
+    # ANSIBLE_ROLE_FETCH_MODE - git checkout ansible roles, don't use galaxy
+    # BOOTSTRAP_OPTS - specify ironic as Nova's virt type
     kwargs = {'cwd': '/opt/openstack-ansible',
-              'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone'}}
+              'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
+                      'BOOTSTRAP_OPTS': 'nova_virt_type=ironic'}}
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
         kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
                               'https_proxy': r.complete['http-proxy']})
@@ -197,11 +200,6 @@ def main(screen):
                     'fixup-add-ironic',
                     ('sed -i -e "/- name: heat.yml.aio/ a \        '
                      '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
-                    **kwargs),
-          steps.SimpleCommandStep(
-                    'fixup-virt-ironic',
-                    ('echo "nova_virt_type: ironic" >> '
-                     'etc/openstack_deploy/user_variables.yml'),
                     **kwargs),
           steps.RegexpEditorStep(
                     'ansible-role-assignments-github-mirror',
