@@ -79,13 +79,16 @@ class Runner(object):
 
                 if not step.depends or self.complete.get(step.depends, False):
                     progress.clear()
-                    progress.addstr(1, 3, '%s %d steps to run, running %s' %(datetime.datetime.now(), len(self.steps), step_name))
+                    progress.addstr(1, 3, '%s %d steps to run, running %s'
+                                    % (datetime.datetime.now(),
+                                       len(self.steps),
+                                       step_name))
                     progress.border()
                     progress.refresh()
 
                     run.append(step_name)
                     emitter.clear()
-                    emitter.logger('%06d-%s' %(self.counter, step_name))
+                    emitter.logger('%06d-%s' % (self.counter, step_name))
                     outcome = step.run(emitter, self.screen)
                     self.counter += 1
 
@@ -107,27 +110,52 @@ def main(screen):
     r = Runner(screen)
 
     # We really like screen around here
-    r.load_step(steps.SimpleCommandStep('apt-daily', 'while [ `ps -ef | grep apt.systemd.daily | grep -vc "grep"` -gt 0 ]; do   echo "Waiting for daily apt run to end";   sleep 10; done'))
+    r.load_step(steps.SimpleCommandStep(
+            'apt-daily',
+            ('while [ `ps -ef | grep apt.systemd.daily | '
+             'grep -vc "grep"` -gt 0 ]; do '
+             'echo "Waiting for daily apt run to end"; sleep 10; done')
+            ))
     r.resolve_steps()
 
     # git proxies
     r.load_dependancy_chain(
-        [steps.QuestionStep('git-mirror-github',
-                      'Are you running a local github.com mirror?',
-                      'Mirroring github.com speeds up setup on slow and unreliable networks, but means that you have to maintain a mirror somewhere on your corporate network. If you are unsure, just enter "git://github.com" here. Otherwise, we need an answer in the form of <protocol>://<server>, for example git://gitmirror.example.com',
-                      'Mirror URL'),
-         step.QuestionStep('git-mirror-openstack',
-                      'Are you running a local git.openstack.org mirror?',
-                      'Mirroring git.openstack.org speeds up setup on slow and unreliable networks, but means that you have to maintain a mirror somewhere on your corporate network. If you are unsure, just enter "git://git.openstack.org" here. Otherwise, we need an answer in the form of <protocol>://<server>, for example git://gitmirror.example.com',
-                      'Mirror URL'),
-         step.QuestionStep('osa-branch',
-                      'What OSA branch (or commit SHA) would you like to use?',
-                      'Use stable/newton unless you know what you are doing.',
-                      'OSA branch'),
-         step.QuestionStep('http-proxy',
-                      'Are you running a local http proxy?',
-                      'OSA will download large objects such as LXC base images. If you have a slow network, or are on a corporate network which requires a proxy, configure it here with a URL like http://cache.example.com:3128 . If you do not use a proxy, please enter "none" here.',
-                      'HTTP Proxy'),
+        [steps.QuestionStep(
+                    'git-mirror-github',
+                    'Are you running a local github.com mirror?',
+                    ('Mirroring github.com speeds up setup on slow and '
+                     'unreliable networks, but means that you have to '
+                     'maintain a mirror somewhere on your corporate network. '
+                     'If you are unsure, just enter "git://github.com" here. '
+                     'Otherwise, we need an answer in the form of '
+                     '<protocol>://<server>, for example '
+                     'git://gitmirror.example.com'),
+                    'Mirror URL'),
+         step.QuestionStep(
+                    'git-mirror-openstack',
+                    'Are you running a local git.openstack.org mirror?',
+                    ('Mirroring git.openstack.org speeds up setup on slow '
+                     'and unreliable networks, but means that you have to '
+                     'maintain a mirror somewhere on your corporate network. '
+                     'If you are unsure, just enter '
+                     '"git://git.openstack.org" here. Otherwise, we need an '
+                     'answer in the form of <protocol>://<server>, for '
+                     'example git://gitmirror.example.com'),
+                    'Mirror URL'),
+         step.QuestionStep(
+                    'osa-branch',
+                    'What OSA branch (or commit SHA) would you like to use?',
+                    'Use stable/newton unless you know what you are doing.',
+                    'OSA branch'),
+         step.QuestionStep(
+                    'http-proxy',
+                    'Are you running a local http proxy?',
+                    ('OSA will download large objects such as LXC base '
+                     'images. If you have a slow network, or are on a '
+                     'corporate network which requires a proxy, configure it '
+                     'here with a URL like http://cache.example.com:3128 . '
+                     'If you do not use a proxy, please enter "none" here.'),
+                    'HTTP Proxy'),
          ])
 
     # APT commands
@@ -135,8 +163,9 @@ def main(screen):
         [step.SimpleCommandStep('apt-update', 'apt-get update'),
          step.SimpleCommandStep('apt-upgrade', 'apt-get upgrade -y'),
          step.SimpleCommandStep('apt-dist-upgrade', 'apt-get dist-upgrade -y'),
-         step.SimpleCommandStep('apt-useful',
-                           'apt-get install -y screen ack-grep git expect')
+         step.SimpleCommandStep(
+                'apt-useful',
+                'apt-get install -y screen ack-grep git expect')
          ])
 
     # Do the thing
@@ -144,36 +173,85 @@ def main(screen):
 
     # Steps requiring data from earlier
     r.load_dependancy_chain(
-        [step.SimpleCommandStep('git-clone-osa', 'git clone %s/openstack/openstack-ansible /opt/openstack-ansible' % r.complete['git-mirror-openstack']),
+        [step.SimpleCommandStep(
+                    'git-clone-osa',
+                    ('git clone %s/openstack/openstack-ansible '
+                     '/opt/openstack-ansible'
+                     % r.complete['git-mirror-openstack'])),
          ])
 
     # Steps where we now have the OSA checkout
     kwargs = {'cwd': '/opt/openstack-ansible',
               'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone'}}
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
-         kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
-                               'https_proxy': r.complete['http-proxy']})
+        kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
+                              'https_proxy': r.complete['http-proxy']})
     r.load_dependancy_chain(
-         [step.SimpleCommandStep('git-checkout-osa', 'git checkout %s' % r.complete['osa-branch'], **kwargs),
-          step.SimpleCommandStep('fixup-add-ironic', 'sed -i -e "/- name: heat.yml.aio/ a \        - name: ironic.yml.aio"  tests/bootstrap-aio.yml', **kwargs),
-          step.SimpleCommandStep('fixup-virt-ironic', 'echo "nova_virt_type: ironic" >> etc/openstack_deploy/user_variables.yml', **kwargs),
-          step.RegexpEditorStep('ansible-role-assignments-github-mirror', 'ansible-role-requirements.yml',
-                           '(http|https|git)://github.com', r.complete['git-mirror-github'], **kwargs),
-          step.RegexpEditorStep('ansible-role-assignments-openstack-mirror', 'ansible-role-requirements.yml',
-                           '(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'], **kwargs),
-          step.RegexpEditorStep('ansible-no-loopback-swap', '/opt/openstack-ansible/tests/roles/bootstrap-host/tasks/prepare_loopback_swap.yml',
-                           'command: grep /openstack/swap.img /proc/swaps', 'command: /bin/true', **kwargs),
-          step.RegexpEditorStep('ansible-from-mirror', '/opt/openstack-ansible/scripts/bootstrap-ansible.sh',
-                           'https://github.com/ansible/ansible', '%s/ansible/ansible' % r.complete['git-mirror-github']),
-          step.SimpleCommandStep('bootstrap-ansible', './scripts/bootstrap-ansible.sh', **kwargs),
-          step.SimpleCommandStep('lxc-install', 'apt-get install -y lxc', **kwargs),
-          step.RegexpEditorStep('lxc-cachable-downloads', '/usr/share/lxc/templates/lxc-download',
-                           'wget_wrapper -T 30 -q https?://', 'wget_wrapper -T 30 -q --no-hsts http://', **kwargs),
-          step.SimpleCommandStep('bootstrap-aio', './scripts/bootstrap-aio.sh', **kwargs),
-          step.RegexpEditorStep('repo-container-retries', '/etc/ansible/roles/repo_build/tasks/repo_clone_git.yml',
-                           'retries: 360', 'retries: 3600'),
+         [step.SimpleCommandStep(
+                    'git-checkout-osa',
+                    'git checkout %s' % r.complete['osa-branch'],
+                    **kwargs),
+          step.SimpleCommandStep(
+                    'fixup-add-ironic',
+                    ('sed -i -e "/- name: heat.yml.aio/ a \        '
+                     '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
+                    **kwargs),
+          step.SimpleCommandStep(
+                    'fixup-virt-ironic',
+                    ('echo "nova_virt_type: ironic" >> '
+                     'etc/openstack_deploy/user_variables.yml'),
+                    **kwargs),
+          step.RegexpEditorStep(
+                    'ansible-role-assignments-github-mirror',
+                    'ansible-role-requirements.yml',
+                    '(http|https|git)://github.com',
+                    r.complete['git-mirror-github'],
+                    **kwargs),
+          step.RegexpEditorStep(
+                    'ansible-role-assignments-openstack-mirror',
+                    'ansible-role-requirements.yml',
+                    '(http|https|git)://git.openstack.org',
+                    r.complete['git-mirror-openstack'],
+                    **kwargs),
+          step.RegexpEditorStep(
+                    'ansible-no-loopback-swap',
+                    ('/opt/openstack-ansible/tests/roles/bootstrap-host/'
+                     'tasks/prepare_loopback_swap.yml'),
+                    'command: grep /openstack/swap.img /proc/swaps',
+                    'command: /bin/true',
+                    **kwargs),
+          step.RegexpEditorStep(
+                    'ansible-from-mirror',
+                    '/opt/openstack-ansible/scripts/bootstrap-ansible.sh',
+                    'https://github.com/ansible/ansible',
+                    '%s/ansible/ansible' % r.complete['git-mirror-github'],
+                    **kwargs),
+          step.SimpleCommandStep(
+                    'bootstrap-ansible',
+                    './scripts/bootstrap-ansible.sh',
+                    **kwargs),
+          step.SimpleCommandStep(
+                    'lxc-install',
+                    'apt-get install -y lxc',
+                    **kwargs),
+          step.RegexpEditorStep(
+                    'lxc-cachable-downloads',
+                    '/usr/share/lxc/templates/lxc-download',
+                    'wget_wrapper -T 30 -q https?://',
+                    'wget_wrapper -T 30 -q --no-hsts http://',
+                    **kwargs),
+          step.SimpleCommandStep(
+                    'bootstrap-aio',
+                    './scripts/bootstrap-aio.sh',
+                    **kwargs),
+          step.RegexpEditorStep(
+                    'repo-container-retries',
+                    '/etc/ansible/roles/repo_build/tasks/repo_clone_git.yml',
+                    'retries: 360',
+                    'retries: 3600',
+                    **kwargs),
           ],
-        depends='git-clone-osa')
+         depends='git-clone-osa')
 
     # We also need to re-write git repos in a large number of roles
     r.load_step(steps.BulkRegexpEditorStep(
@@ -181,11 +259,15 @@ def main(screen):
             [('(http|https|git)://github.com',
               r.complete['git-mirror-github']),
              ('(http|https|git)://git.openstack.org',
-              r.complete['git-mirror-openstack'])])
+              r.complete['git-mirror-openstack'])],
+            **kwargs))
 
     # The last of the things, run only once
     kwargs['max_attempts'] = 1
-    r.load_step(step.SimpleCommandStep('bootstrap-run-playbooks', './scripts/run-playbooks.sh', **kwargs))
+    r.load_step(step.SimpleCommandStep(
+                    'bootstrap-run-playbooks',
+                    './scripts/run-playbooks.sh',
+                    **kwargs))
     r.resolve_steps()
 
 

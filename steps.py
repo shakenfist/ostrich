@@ -1,6 +1,18 @@
+import curses
+import datetime
+import fcntl
+import json
+import os
+import psutil
 import re
+import select
+import subprocess
+import sys
+import textwrap
+import time
 
 import emitters
+
 
 class Step(object):
     def __init__(self, name, depends=None, max_attempts=5):
@@ -22,7 +34,7 @@ class SimpleCommandStep(Step):
         self.env.update(env)
 
     def __str__(self):
-        return 'step %s, depends on %s' %(self.name, self.depends)
+        return 'step %s, depends on %s' % (self.name, self.depends)
 
     def run(self, emit, screen):
         emit.emit('Running %s' % self)
@@ -59,18 +71,18 @@ class SimpleCommandStep(Step):
             for child in proc.children(recursive=True):
                 try:
                     seen.append(child.pid)
-                    if not child.pid in procs:
+                    if child.pid not in procs:
                         procs[child.pid] = ' '.join(child.cmdline())
                         emit.emit('*** process started *** %d -> %s'
-                                  %(child.pid, procs[child.pid]))
+                                  % (child.pid, procs[child.pid]))
                 except psutil.NoSuchProcess:
                     pass
 
             ended = []
             for pid in procs:
-                if not pid in seen:
+                if pid not in seen:
                     emit.emit('*** process ended *** %d -> %s'
-                              %(pid, procs.get(child.pid, '???')))
+                              % (pid, procs.get(child.pid, '???')))
                     ended.append(pid)
 
             for pid in ended:
@@ -100,7 +112,7 @@ class RegexpEditorStep(Step):
     def __init__(self, name, path, search, replace, cwd=None, env=None):
         super(RegexpEditorStep, self).__init__(name)
         self.path = path
-        if cwd:
+        if cwd and not path.startswith('/'):
             self.path = os.path.join(cwd, path)
 
         self.search = search
@@ -133,10 +145,11 @@ class RegexpEditorStep(Step):
 
 
 class BulkRegexpEditorStep(Step):
-    def __init__(self, name, path, file_filter, replacements):
+    def __init__(self, name, path, file_filter, replacements, cwd=None,
+                 env=None):
         super(BulkRegexpEditorStep, self).__init__(name)
         self.path = path
-        if cwd:
+        if cwd and not path.startswith('/'):
             self.path = os.path.join(cwd, path)
 
         self.file_filter = re.compile(file_filter)
@@ -156,7 +169,7 @@ class BulkRegexpEditorStep(Step):
                 for (search, replace) in self.replacements:
                     s = RegexpEditorStep('bulk-edit', path, search, replace)
                     result = s.run(silent_emitter, None)
-                    emit.emit('%s -> %s' %(path, result))
+                    emit.emit('%s -> %s' % (path, result))
                     if result != 'Changed 0 lines':
                         changes += 1
 
