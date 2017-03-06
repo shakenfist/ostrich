@@ -16,182 +16,11 @@ import sys
 import textwrap
 import time
 
+import emitters
+import steps
+
 
 progname = os.path.basename(__file__)
-
-
-class Step(object):
-    def __init__(self, name, depends=None, max_attempts=5):
-        self.name = name
-        self.depends = depends
-        self.attempts = 0
-        self.max_attempts = max_attempts
-
-
-class SimpleCommandStep(Step):
-    def __init__(self, name, command, depends=None, cwd=None, env=None, max_attempts=5):
-        super(SimpleCommandStep, self).__init__(name, depends=depends, max_attempts=max_attempts)
-        self.command = command
-        self.cwd = cwd
-
-        self.env = os.environ
-        self.env.update(env)
-
-    def __str__(self):
-        return 'step %s, depends on %s' %(self.name, self.depends)
-
-    def run(self, emit, screen):
-        emit.emit('Running %s' % self)
-        emit.emit('# %s\n' % self.command)
-        self.attempts += 1
-
-        if self.attempts > self.max_attempts:
-            emit.emit('... repeatedly failed step, giving up')
-            sys.exit(1)
-
-        obj = subprocess.Popen(self.command,
-                               stdin=subprocess.PIPE,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE,
-                               shell=True,
-                               cwd=self.cwd,
-                               env=self.env)
-        proc = psutil.Process(obj.pid)
-        procs = {}
-
-        flags = fcntl.fcntl(obj.stdout, fcntl.F_GETFL)
-        fcntl.fcntl(obj.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-
-        flags = fcntl.fcntl(obj.stderr, fcntl.F_GETFL)
-        fcntl.fcntl(obj.stderr, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-
-        obj.stdin.close()
-        while obj.poll() is None:
-            readable, _, _ = select.select([obj.stderr, obj.stdout], [], [], 0)
-            for f in readable:
-                emit.emit(os.read(f.fileno(), 10000))
-
-            seen = []
-            for child in proc.children(recursive=True):
-                try:
-                    seen.append(child.pid)
-                    if not child.pid in procs:
-                        procs[child.pid] = ' '.join(child.cmdline())
-                        emit.emit('*** process started *** %d -> %s' %(child.pid, procs[child.pid]))
-                except psutil.NoSuchProcess:
-                    pass
-
-            ended = []
-            for pid in procs:
-                if not pid in seen:
-                    emit.emit('*** process ended *** %d -> %s' %(pid, procs.get(child.pid, '???')))
-                    ended.append(pid)
-
-            for pid in ended:
-                del procs[pid]
-
-        emit.emit('... process complete')
-        returncode = obj.returncode
-        emit.emit('... exit code %d' % returncode)
-        return returncode == 0
-
-
-class QuestionStep(Step):
-    def __init__(self, name, title, helpful, prompt, depends=None):
-        super(QuestionStep, self).__init__(name, depends)
-        self.title = title
-        self.help = helpful
-        self.prompt = prompt
-
-    def run(self, emit, screen):
-        emit.emit('%s' % self.title)
-        emit.emit('%s\n' % ('=' * len(self.title)))
-        emit.emit('%s\n' % self.help)
-        return emit.getstr('>> ')
-
-
-class RegexpEditorStep(Step):
-    def __init__(self, name, path, search, replace, cwd=None, env=None):
-        super(RegexpEditorStep, self).__init__(name)
-        self.path = path
-        if cwd:
-            self.path = os.path.join(cwd, path)
-
-        self.search = search
-        self.replace = replace
-
-    def run(self, emit, screen):
-        output = []
-        changes = 0
-
-        emit.emit('--- %s' % self.path)
-        emit.emit('+++ %s' % self.path)
-
-        with open(self.path, 'r') as f:
-            for line in f.readlines():
-                line = line.rstrip()
-                newline = re.sub(self.search, self.replace, line)
-                output.append(newline)
-
-                if newline != line:
-                    emit.emit('- %s' % line)
-                    emit.emit('+ %s' % newline)
-                    changes += 1
-                else:
-                    emit.emit('  %s' % line)
-
-        with open(self.path, 'w') as f:
-            f.write('\n'.join(output))
-
-        return 'Changed %d lines' % changes
-
-
-class Emitter(object):
-    def __init__(self, output):
-        self.output = output
-        self.logfile = None
-
-    def clear(self):
-	self.output.clear()
-
-    def logger(self, logfile):
-        if self.logfile:
-            self.logfile.close()
-        self.logfile = open(os.path.expanduser('~/.%s/%s' % (progname, logfile)), 'w')
-
-    def emit(self, s):
-        height, width = self.output.getmaxyx()
-
-        for line in s.split('\n'):
-            line = ''.join([i if ord(i) < 128 else ' ' for i in line])
-
-            if self.logfile:
-                self.logfile.write('%s %s\n' %(datetime.datetime.now(), line))
-                self.logfile.flush()
-
-            for l in textwrap.wrap(line, width - 3):
-                if len(l) > 0:
-                    self.output.scroll()
-                    self.output.addstr(height - 2, 1, ' ' * (width - 1))
-
-                    try:
-                        self.output.addstr(height - 2, 2, l)
-                    except Exception as e:
-                        print 'Exception: %s' % e
-                        print '>>%s<<' % line
-                        sys.exit(1)
-
-        self.output.border()
-        self.output.refresh()
-
-    def getstr(self, s):
-        height, width = self.output.getmaxyx()
-
-        self.emit(s)
-        curses.echo()
-        answer = self.output.getstr(height - 2, len(s) + 2)
-        curses.noecho()
-        return answer
 
 
 class Runner(object):
@@ -233,7 +62,7 @@ class Runner(object):
         output.scrollok(True)
         output.border()
         output.refresh()
-        emitter = Emitter(output)
+        emitter = emitters.Emitter(output)
 
         for step_name in self.complete:
             if step_name in self.steps:
@@ -279,24 +108,24 @@ def main(screen):
     r = Runner(screen)
 
     # We really like screen around here
-    r.load_step(SimpleCommandStep('apt-daily', 'while [ `ps -ef | grep apt.systemd.daily | grep -vc "grep"` -gt 0 ]; do   echo "Waiting for daily apt run to end";   sleep 10; done'))
+    r.load_step(steps.SimpleCommandStep('apt-daily', 'while [ `ps -ef | grep apt.systemd.daily | grep -vc "grep"` -gt 0 ]; do   echo "Waiting for daily apt run to end";   sleep 10; done'))
     r.resolve_steps()
 
     # git proxies
     r.load_dependancy_chain(
-        [QuestionStep('git-mirror-github',
+        [steps.QuestionStep('git-mirror-github',
                       'Are you running a local github.com mirror?',
                       'Mirroring github.com speeds up setup on slow and unreliable networks, but means that you have to maintain a mirror somewhere on your corporate network. If you are unsure, just enter "git://github.com" here. Otherwise, we need an answer in the form of <protocol>://<server>, for example git://gitmirror.example.com',
                       'Mirror URL'),
-         QuestionStep('git-mirror-openstack',
+         step.QuestionStep('git-mirror-openstack',
                       'Are you running a local git.openstack.org mirror?',
                       'Mirroring git.openstack.org speeds up setup on slow and unreliable networks, but means that you have to maintain a mirror somewhere on your corporate network. If you are unsure, just enter "git://git.openstack.org" here. Otherwise, we need an answer in the form of <protocol>://<server>, for example git://gitmirror.example.com',
                       'Mirror URL'),
-         QuestionStep('osa-branch',
+         step.QuestionStep('osa-branch',
                       'What OSA branch (or commit SHA) would you like to use?',
                       'Use stable/newton unless you know what you are doing.',
                       'OSA branch'),
-         QuestionStep('http-proxy',
+         step.QuestionStep('http-proxy',
                       'Are you running a local http proxy?',
                       'OSA will download large objects such as LXC base images. If you have a slow network, or are on a corporate network which requires a proxy, configure it here with a URL like http://cache.example.com:3128 . If you do not use a proxy, please enter "none" here.',
                       'HTTP Proxy'),
@@ -304,10 +133,10 @@ def main(screen):
 
     # APT commands
     r.load_dependancy_chain(
-        [SimpleCommandStep('apt-update', 'apt-get update'),
-         SimpleCommandStep('apt-upgrade', 'apt-get upgrade -y'),
-         SimpleCommandStep('apt-dist-upgrade', 'apt-get dist-upgrade -y'),
-         SimpleCommandStep('apt-useful',
+        [step.SimpleCommandStep('apt-update', 'apt-get update'),
+         step.SimpleCommandStep('apt-upgrade', 'apt-get upgrade -y'),
+         step.SimpleCommandStep('apt-dist-upgrade', 'apt-get dist-upgrade -y'),
+         step.SimpleCommandStep('apt-useful',
                            'apt-get install -y screen ack-grep git expect')
          ])
 
@@ -316,7 +145,7 @@ def main(screen):
 
     # Steps requiring data from earlier
     r.load_dependancy_chain(
-        [SimpleCommandStep('git-clone-osa', 'git clone %s/openstack/openstack-ansible /opt/openstack-ansible' % r.complete['git-mirror-openstack']),
+        [step.SimpleCommandStep('git-clone-osa', 'git clone %s/openstack/openstack-ansible /opt/openstack-ansible' % r.complete['git-mirror-openstack']),
          ])
 
     # Steps where we now have the OSA checkout
@@ -326,23 +155,23 @@ def main(screen):
          kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
                                'https_proxy': r.complete['http-proxy']})
     r.load_dependancy_chain(
-         [SimpleCommandStep('git-checkout-osa', 'git checkout %s' % r.complete['osa-branch'], **kwargs),
-          SimpleCommandStep('fixup-add-ironic', 'sed -i -e "/- name: heat.yml.aio/ a \        - name: ironic.yml.aio"  tests/bootstrap-aio.yml', **kwargs),
-          SimpleCommandStep('fixup-virt-ironic', 'echo "nova_virt_type: ironic" >> etc/openstack_deploy/user_variables.yml', **kwargs),
-          RegexpEditorStep('ansible-role-assignments-github-mirror', 'ansible-role-requirements.yml',
+         [step.SimpleCommandStep('git-checkout-osa', 'git checkout %s' % r.complete['osa-branch'], **kwargs),
+          step.SimpleCommandStep('fixup-add-ironic', 'sed -i -e "/- name: heat.yml.aio/ a \        - name: ironic.yml.aio"  tests/bootstrap-aio.yml', **kwargs),
+          step.SimpleCommandStep('fixup-virt-ironic', 'echo "nova_virt_type: ironic" >> etc/openstack_deploy/user_variables.yml', **kwargs),
+          step.RegexpEditorStep('ansible-role-assignments-github-mirror', 'ansible-role-requirements.yml',
                            '(http|https|git)://github.com', r.complete['git-mirror-github'], **kwargs),
-          RegexpEditorStep('ansible-role-assignments-openstack-mirror', 'ansible-role-requirements.yml',
+          step.RegexpEditorStep('ansible-role-assignments-openstack-mirror', 'ansible-role-requirements.yml',
                            '(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'], **kwargs),
-          RegexpEditorStep('ansible-no-loopback-swap', '/opt/openstack-ansible/tests/roles/bootstrap-host/tasks/prepare_loopback_swap.yml',
+          step.RegexpEditorStep('ansible-no-loopback-swap', '/opt/openstack-ansible/tests/roles/bootstrap-host/tasks/prepare_loopback_swap.yml',
                            'command: grep /openstack/swap.img /proc/swaps', 'command: /bin/true', **kwargs),
-          RegexpEditorStep('ansible-from-mirror', '/opt/openstack-ansible/scripts/bootstrap-ansible.sh',
+          step.RegexpEditorStep('ansible-from-mirror', '/opt/openstack-ansible/scripts/bootstrap-ansible.sh',
                            'https://github.com/ansible/ansible', '%s/ansible/ansible' % r.complete['git-mirror-github']),
-          SimpleCommandStep('bootstrap-ansible', './scripts/bootstrap-ansible.sh', **kwargs),
-          SimpleCommandStep('lxc-install', 'apt-get install -y lxc', **kwargs),
-          RegexpEditorStep('lxc-cachable-downloads', '/usr/share/lxc/templates/lxc-download',
+          step.SimpleCommandStep('bootstrap-ansible', './scripts/bootstrap-ansible.sh', **kwargs),
+          step.SimpleCommandStep('lxc-install', 'apt-get install -y lxc', **kwargs),
+          step.RegexpEditorStep('lxc-cachable-downloads', '/usr/share/lxc/templates/lxc-download',
                            'wget_wrapper -T 30 -q https?://', 'wget_wrapper -T 30 -q --no-hsts http://', **kwargs),
-          SimpleCommandStep('bootstrap-aio', './scripts/bootstrap-aio.sh', **kwargs),
-          RegexpEditorStep('repo-container-retries', '/etc/ansible/roles/repo_build/tasks/repo_clone_git.yml',
+          step.SimpleCommandStep('bootstrap-aio', './scripts/bootstrap-aio.sh', **kwargs),
+          step.RegexpEditorStep('repo-container-retries', '/etc/ansible/roles/repo_build/tasks/repo_clone_git.yml',
                            'retries: 360', 'retries: 3600'),
           ],
         depends='git-clone-osa')
@@ -353,15 +182,15 @@ def main(screen):
             path = os.path.join(root, filename)
             jobpath = path.replace('.yml', '').replace('/', '_')
             if path.endswith('.yml'):
-                r.load_step(RegexpEditorStep('%s-github-mirror' % jobpath, path,
+                r.load_step(step.RegexpEditorStep('%s-github-mirror' % jobpath, path,
                                              '(http|https|git)://github.com', r.complete['git-mirror-github'], **kwargs))
-                r.load_step(RegexpEditorStep('%s-openstack-mirror' % jobpath, path,
+                r.load_step(step.RegexpEditorStep('%s-openstack-mirror' % jobpath, path,
                                              '(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'], **kwargs))
     r.resolve_steps()
 
     # The last of the things
     kwargs['max_attempts'] = 1
-    r.load_step(SimpleCommandStep('bootstrap-run-playbooks', './scripts/run-playbooks.sh', **kwargs))
+    r.load_step(step.SimpleCommandStep('bootstrap-run-playbooks', './scripts/run-playbooks.sh', **kwargs))
     r.resolve_steps()
 
 
