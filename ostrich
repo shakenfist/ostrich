@@ -209,22 +209,15 @@ def main(screen):
                     'git-checkout-osa',
                     'git checkout %s' % r.complete['osa-branch'],
                     **kwargs),
+          steps.BulkRegexpEditorStep(
+                    'apply-git-mirrors-to-osa', '/opt/openstack-ansible', '.*\.(ini|yml|sh)$',
+                    [('(http|https|git)://github.com', r.complete['git-mirror-github']),
+                     ('(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'])],
+                    **kwargs),
           steps.SimpleCommandStep(
                     'fixup-add-ironic',
                     ('sed -i -e "/- name: heat.yml.aio/ a \        '
                      '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
-                    **kwargs),
-          steps.RegexpEditorStep(
-                    'ansible-role-assignments-github-mirror',
-                    'ansible-role-requirements.yml',
-                    '(http|https|git)://github.com',
-                    r.complete['git-mirror-github'],
-                    **kwargs),
-          steps.RegexpEditorStep(
-                    'ansible-role-assignments-openstack-mirror',
-                    'ansible-role-requirements.yml',
-                    '(http|https|git)://git.openstack.org',
-                    r.complete['git-mirror-openstack'],
                     **kwargs),
           steps.RegexpEditorStep(
                     'ansible-no-loopback-swap',
@@ -232,12 +225,6 @@ def main(screen):
                      'tasks/prepare_loopback_swap.yml'),
                     'command: grep /openstack/swap.img /proc/swaps',
                     'command: /bin/true',
-                    **kwargs),
-          steps.RegexpEditorStep(
-                    'ansible-from-mirror',
-                    '/opt/openstack-ansible/scripts/bootstrap-ansible.sh',
-                    'https://github.com/ansible/ansible',
-                    '%s/ansible/ansible' % r.complete['git-mirror-github'],
                     **kwargs),
           steps.SimpleCommandStep(
                     'bootstrap-ansible',
