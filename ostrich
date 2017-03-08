@@ -244,12 +244,6 @@ def main(screen):
                     'bootstrap-aio',
                     './scripts/bootstrap-aio.sh',
                     **kwargs),
-          steps.RegexpEditorStep(
-                    'repo-container-retries',
-                    '/etc/ansible/roles/repo_build/tasks/repo_clone_git.yml',
-                    'retries: 360',
-                    'retries: 3600',
-                    **kwargs),
           ],
          depends='git-clone-osa')
 
