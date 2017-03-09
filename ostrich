@@ -180,7 +180,7 @@ def main(screen):
                 'apt-get dist-upgrade -y'),
          steps.SimpleCommandStep(
                 'apt-useful',
-                'apt-get install -y screen ack-grep git expect')
+                'apt-get install -y screen ack-grep git expect lxc')
          ])
 
     # Do the thing
@@ -229,10 +229,6 @@ def main(screen):
           steps.SimpleCommandStep(
                     'bootstrap-ansible',
                     './scripts/bootstrap-ansible.sh',
-                    **kwargs),
-          steps.SimpleCommandStep(
-                    'lxc-install',
-                    'apt-get install -y lxc',
                     **kwargs),
           steps.RegexpEditorStep(
                     'lxc-cachable-downloads',
