@@ -250,8 +250,8 @@ def main(screen):
             'bulk-edit-roles', '/etc/ansible', '.*\.(ini|yml)$',
             [('(http|https|git)://github.com', r.complete['git-mirror-github']),
              ('(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack']),
-             ('  get_url:', ('  until: get_url_result | success\n'
-                             '  retries: 5\n  delay: 30\n  get_url:')),
+             #('  get_url:', ('  until: get_url_result | success\n'
+             #                '  retries: 5\n  delay: 30\n  get_url:')),
              (' +checksum:.*', '')],
             **kwargs))
     r.resolve_steps()
