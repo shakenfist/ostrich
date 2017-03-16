@@ -210,9 +210,13 @@ def main(screen):
                     'git checkout %s' % r.complete['osa-branch'],
                     **kwargs),
           steps.BulkRegexpEditorStep(
-                    'apply-git-mirrors-to-osa', '/opt/openstack-ansible', '.*\.(ini|yml|sh)$',
-                    [('(http|https|git)://github.com', r.complete['git-mirror-github']),
-                     ('(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack'])],
+                    'apply-git-mirrors-to-osa',
+                    '/opt/openstack-ansible',
+                    '.*\.(ini|yml|sh)$',
+                    [('(http|https|git)://github.com',
+                      r.complete['git-mirror-github']),
+                     ('(http|https|git)://git.openstack.org',
+                      r.complete['git-mirror-openstack'])],
                     **kwargs),
           steps.SimpleCommandStep(
                     'fixup-add-ironic',
@@ -247,9 +251,13 @@ def main(screen):
 
     # We also need to re-write git repos in a large number of roles
     r.load_step(steps.BulkRegexpEditorStep(
-            'bulk-edit-roles', '/etc/ansible', '.*\.(ini|yml)$',
-            [('(http|https|git)://github.com', r.complete['git-mirror-github']),
-             ('(http|https|git)://git.openstack.org', r.complete['git-mirror-openstack']),
+            'bulk-edit-roles',
+            '/etc/ansible',
+            '.*\.(ini|yml)$',
+            [('(http|https|git)://github.com',
+              r.complete['git-mirror-github']),
+             ('(http|https|git)://git.openstack.org',
+              r.complete['git-mirror-openstack']),
              #('  get_url:', ('  until: get_url_result | success\n'
              #                '  retries: 5\n  delay: 30\n  get_url:')),
              (' +checksum:.*', '')],
