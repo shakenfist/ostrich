@@ -27,6 +27,7 @@ import subprocess
 import sys
 import textwrap
 import time
+import urlparse
 
 import emitters
 import steps
@@ -204,49 +205,97 @@ def main(screen):
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
         kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
                               'https_proxy': r.complete['http-proxy']})
-    r.load_dependancy_chain(
-         [steps.SimpleCommandStep(
-                    'git-checkout-osa',
-                    'git checkout %s' % r.complete['osa-branch'],
-                    **kwargs),
-          steps.BulkRegexpEditorStep(
-                    'apply-git-mirrors-to-osa',
-                    '/opt/openstack-ansible',
-                    '.*\.(ini|yml|sh)$',
-                    [('(http|https|git)://github.com',
-                      r.complete['git-mirror-github']),
-                     ('(http|https|git)://git.openstack.org',
-                      r.complete['git-mirror-openstack'])],
-                    **kwargs),
-          steps.SimpleCommandStep(
-                    'fixup-add-ironic',
-                    ('sed -i -e "/- name: heat.yml.aio/ a \        '
-                     '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
-                    **kwargs),
-          steps.RegexpEditorStep(
-                    'ansible-no-loopback-swap',
-                    ('/opt/openstack-ansible/tests/roles/bootstrap-host/'
-                     'tasks/prepare_loopback_swap.yml'),
-                    'command: grep /openstack/swap.img /proc/swaps',
-                    'command: /bin/true',
-                    **kwargs),
-          steps.SimpleCommandStep(
-                    'bootstrap-ansible',
-                    './scripts/bootstrap-ansible.sh',
-                    **kwargs),
-          steps.RegexpEditorStep(
-                    'lxc-cachable-downloads',
-                    '/usr/share/lxc/templates/lxc-download',
-                    'wget_wrapper -T 30 -q https?://',
-                    'wget_wrapper -T 30 -q --no-hsts http://',
-                    **kwargs),
-          steps.SimpleCommandStep(
-                    'bootstrap-aio',
-                    './scripts/bootstrap-aio.sh',
-                    **kwargs),
-          ],
-         depends='git-clone-osa')
 
+    nextsteps = [
+        steps.SimpleCommandStep(
+            'git-checkout-osa',
+            'git checkout %s' % r.complete['osa-branch'],
+            **kwargs),
+        steps.BulkRegexpEditorStep(
+            'apply-git-mirrors-to-osa',
+            '/opt/openstack-ansible',
+            '.*\.(ini|yml|sh)$',
+            [
+                ('(http|https|git)://github.com',
+                 r.complete['git-mirror-github']),
+                ('(http|https|git)://git.openstack.org',
+                 r.complete['git-mirror-openstack'])
+            ],
+            **kwargs),
+        steps.BulkRegexpEditorStep(
+            'unapply-git-mirrors-for-cgit',
+            '/opt/openstack-ansible',
+            '.*\.(ini|yml|sh)$',
+            [
+                ('%s/cgit' * r.complete['git-mirror-openstack'],
+                 'https://git.openstack.org/cgit')
+            ],
+            **kwargs)
+        ]
+
+    # Release specific steps
+    if r.complete['osa-branch'] == 'stable/newton':
+        nextsteps.append(
+            steps.SimpleCommandStep(
+                'fixup-add-ironic',
+                ('sed -i -e "/- name: heat.yml.aio/ a \        '
+                 '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
+                **kwargs)
+            )
+        nextsteps.append(
+            steps.RegexpEditorStep(
+                'ansible-no-loopback-swap',
+                ('/opt/openstack-ansible/tests/roles/bootstrap-host/'
+                 'tasks/prepare_loopback_swap.yml'),
+                'command: grep /openstack/swap.img /proc/swaps',
+                'command: /bin/true',
+                **kwargs)
+            )
+    elif r.complete['osa-branch'] == 'stable/mitaka':
+        p = urlparse.urlparse(r.complete['git-mirror-github'])
+        mirror_host_github = p.netloc.split(':')[0]
+        p = urlparse.urlparse(r.complete['git-mirror-openstack'])
+        mirror_host_openstack = p.netloc.split(':')[0]
+
+        nextsteps.append(
+            steps.SimpleCommandStep(
+                'git-mirror-host-keys',
+                ('ssh-keyscan -H %s >> /etc/ssh/ssh_known_hosts'
+                 % mirror_host_openstack),
+                **kwargs)
+            )
+
+        if mirror_host_github != mirror_host_openstack:
+            nextsteps.append(
+                steps.SimpleCommandStep(
+                    'git-mirror-host-keys-github',
+                    ('ssh-keyscan -H %s >> /etc/ssh/ssh_known_hosts'
+                     % mirror_host_github),
+                    **kwargs)
+                )
+
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'bootstrap-ansible',
+            './scripts/bootstrap-ansible.sh',
+            **kwargs)
+        )
+    nextsteps.append(
+        steps.RegexpEditorStep(
+            'lxc-cachable-downloads',
+            '/usr/share/lxc/templates/lxc-download',
+            'wget_wrapper -T 30 -q https?://',
+            'wget_wrapper -T 30 -q --no-hsts http://',
+            **kwargs)
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'bootstrap-aio',
+            './scripts/bootstrap-aio.sh',
+            **kwargs)
+        )
+
+    r.load_dependancy_chain(nextsteps, depends='git-clone-osa')
     r.resolve_steps()
 
     # We also need to re-write git repos in a large number of roles
