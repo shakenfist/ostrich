@@ -239,7 +239,7 @@ def main(screen):
     if r.complete['osa-branch'] == 'stable/newton':
         nextsteps.append(
             steps.SimpleCommandStep(
-                'fixup-add-ironic',
+                'fixup-add-ironic-newton',
                 ('sed -i -e "/- name: heat.yml.aio/ a \        '
                  '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
                 **kwargs)
@@ -276,19 +276,27 @@ def main(screen):
                     **kwargs)
                 )
 
+        nextsteps.append(
+            steps.SimpleCommandStep(
+                'fixup-add-ironic-mitaka',
+                """sed -i -e '/swift_conf_overrides | default/ a \\    - name: ironic.yml.aio\\n      override: "{{ ironic_conf_overrides | default({}) }}"'  tests/roles/bootstrap-host/tasks/prepare_aio_config.yml""",
+                **kwargs)
+            )
+
+    nextsteps.append(
+        steps.RegexpEditorStep(
+            'lxc-cachable-downloads',
+            '/usr/share/lxc/templates/lxc-download',
+            'wget_wrapper -T 30 -q https?://',
+            'wget_wrapper -T 30 -q --no-hsts http://',
+            **kwargs)
+        )
+
     if not ARGS.configure_only:
         nextsteps.append(
             steps.SimpleCommandStep(
                 'bootstrap-ansible',
                 './scripts/bootstrap-ansible.sh',
-                **kwargs)
-            )
-        nextsteps.append(
-            steps.RegexpEditorStep(
-                'lxc-cachable-downloads',
-                '/usr/share/lxc/templates/lxc-download',
-                'wget_wrapper -T 30 -q https?://',
-                'wget_wrapper -T 30 -q --no-hsts http://',
                 **kwargs)
             )
         nextsteps.append(
@@ -298,9 +306,10 @@ def main(screen):
                 **kwargs)
             )
 
-        r.load_dependancy_chain(nextsteps, depends='git-clone-osa')
-        r.resolve_steps()
+    r.load_dependancy_chain(nextsteps, depends='git-clone-osa')
+    r.resolve_steps()
 
+    if not ARGS.configure_only:
         # We also need to re-write git repos in a large number of roles
         r.load_step(steps.BulkRegexpEditorStep(
                 'bulk-edit-roles',
@@ -322,8 +331,7 @@ def main(screen):
                          'run-playbooks',
                          './scripts/run-playbooks.sh',
                          **kwargs))
-
-    r.resolve_steps()
+        r.resolve_steps()
 
 
 if __name__ == '__main__':
