@@ -326,7 +326,8 @@ def main(screen):
 
     if not ARGS.configure_only:
         # We also need to re-write git repos in a large number of roles
-        r.load_step(steps.BulkRegexpEditorStep(
+        r.load_step(
+            steps.BulkRegexpEditorStep(
                 'bulk-edit-roles',
                 '/etc/ansible',
                 '.*\.(ini|yml)$',
@@ -342,6 +343,15 @@ def main(screen):
                     (' +checksum:.*', '')
                 ],
                 **kwargs))
+
+        r.load_step(
+            steps.FileAppendStep(
+                'enable-ironic-harder-mitaka',
+                '/etc/openstack_deploy/user_variables.yml',
+                '\n\nnova_virt_type: ironic\n',
+                **kwargs)
+            )
+
         r.resolve_steps()
 
         # The last of the things, run only once

@@ -181,7 +181,7 @@ class FileAppendStep(Step):
     def __init__(self, name, path, text, depends=None, cwd=None, env=None):
         super(FileAppendStep, self).__init__(name, depends)
         self.path = path
-        if cwd:
+        if cwd and not self.path.startswith('/'):
             self.path = os.path.join(cwd, path)
         self.text = text
 
