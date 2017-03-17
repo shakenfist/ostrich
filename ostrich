@@ -208,6 +208,22 @@ def main(screen):
         kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
                               'https_proxy': r.complete['http-proxy']})
 
+        r.load_step(
+            steps.FileAppendStep(
+                'proxy-environment',
+                '/etc/environment',
+                (('export http_proxy="%(proxy)s"'
+                  'export https_proxy="%(proxy)s"'
+                  'export HTTP_PROXY="%(proxy)s"'
+                  'export HTTPS_PROXY="%(proxy)s"'
+                  'export ftp_proxy="%(proxy)s"'
+                  'export FTP_PROXY="%(proxy)s"'
+                  'export no_proxy=localhost'
+                  'export NO_PROXY=localhost')
+                 % {'proxy': r.complete['http-proxy']}),
+                **kwargs)
+            )
+
     nextsteps = [
         steps.SimpleCommandStep(
             'git-checkout-osa',
