@@ -214,14 +214,16 @@ def main(screen):
             'git checkout %s' % r.complete['osa-branch'],
             **kwargs),
         steps.BulkRegexpEditorStep(
-            'apply-git-mirrors-to-osa',
+            'bulk-edit-osa',
             '/opt/openstack-ansible',
             '.*\.(ini|yml|sh)$',
             [
                 ('(http|https|git)://github.com',
                  r.complete['git-mirror-github']),
                 ('(http|https|git)://git.openstack.org',
-                 r.complete['git-mirror-openstack'])
+                 r.complete['git-mirror-openstack']),
+                ('https://rpc-repo.rackspace.com',
+                 'http://rpc-repo.rackspace.com'),
             ],
             **kwargs),
         steps.BulkRegexpEditorStep(
@@ -328,13 +330,17 @@ def main(screen):
                 'bulk-edit-roles',
                 '/etc/ansible',
                 '.*\.(ini|yml)$',
-                [('(http|https|git)://github.com',
-                  r.complete['git-mirror-github']),
-                 ('(http|https|git)://git.openstack.org',
-                  r.complete['git-mirror-openstack']),
-                 #('  get_url:', ('  until: get_url_result | success\n'
-                 #                '  retries: 5\n  delay: 30\n  get_url:')),
-                 (' +checksum:.*', '')],
+                [
+                    ('(http|https|git)://github.com',
+                     r.complete['git-mirror-github']),
+                    ('(http|https|git)://git.openstack.org',
+                     r.complete['git-mirror-openstack']),
+                    ('https://rpc-repo.rackspace.com',
+                     'http://rpc-repo.rackspace.com'),
+                    #('  get_url:', ('  until: get_url_result | success\n'
+                    #                '  retries: 5\n  delay: 30\n  get_url:')),
+                    (' +checksum:.*', '')
+                ],
                 **kwargs))
         r.resolve_steps()
 
