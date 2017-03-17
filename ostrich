@@ -15,6 +15,7 @@
 # An OpenStack ansible install runner
 #
 
+import argparse
 import curses
 import datetime
 import fcntl
@@ -34,6 +35,7 @@ import steps
 
 
 progname = os.path.basename(__file__)
+ARGS = None
 
 
 class Runner(object):
@@ -274,55 +276,64 @@ def main(screen):
                     **kwargs)
                 )
 
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'bootstrap-ansible',
-            './scripts/bootstrap-ansible.sh',
-            **kwargs)
-        )
-    nextsteps.append(
-        steps.RegexpEditorStep(
-            'lxc-cachable-downloads',
-            '/usr/share/lxc/templates/lxc-download',
-            'wget_wrapper -T 30 -q https?://',
-            'wget_wrapper -T 30 -q --no-hsts http://',
-            **kwargs)
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'bootstrap-aio',
-            './scripts/bootstrap-aio.sh',
-            **kwargs)
-        )
+    if not ARGS.configure_only:
+        nextsteps.append(
+            steps.SimpleCommandStep(
+                'bootstrap-ansible',
+                './scripts/bootstrap-ansible.sh',
+                **kwargs)
+            )
+        nextsteps.append(
+            steps.RegexpEditorStep(
+                'lxc-cachable-downloads',
+                '/usr/share/lxc/templates/lxc-download',
+                'wget_wrapper -T 30 -q https?://',
+                'wget_wrapper -T 30 -q --no-hsts http://',
+                **kwargs)
+            )
+        nextsteps.append(
+            steps.SimpleCommandStep(
+                'bootstrap-aio',
+                './scripts/bootstrap-aio.sh',
+                **kwargs)
+            )
 
-    r.load_dependancy_chain(nextsteps, depends='git-clone-osa')
-    r.resolve_steps()
+        r.load_dependancy_chain(nextsteps, depends='git-clone-osa')
+        r.resolve_steps()
 
-    # We also need to re-write git repos in a large number of roles
-    r.load_step(steps.BulkRegexpEditorStep(
-            'bulk-edit-roles',
-            '/etc/ansible',
-            '.*\.(ini|yml)$',
-            [('(http|https|git)://github.com',
-              r.complete['git-mirror-github']),
-             ('(http|https|git)://git.openstack.org',
-              r.complete['git-mirror-openstack']),
-             #('  get_url:', ('  until: get_url_result | success\n'
-             #                '  retries: 5\n  delay: 30\n  get_url:')),
-             (' +checksum:.*', '')],
-            **kwargs))
-    r.resolve_steps()
+        # We also need to re-write git repos in a large number of roles
+        r.load_step(steps.BulkRegexpEditorStep(
+                'bulk-edit-roles',
+                '/etc/ansible',
+                '.*\.(ini|yml)$',
+                [('(http|https|git)://github.com',
+                  r.complete['git-mirror-github']),
+                 ('(http|https|git)://git.openstack.org',
+                  r.complete['git-mirror-openstack']),
+                 #('  get_url:', ('  until: get_url_result | success\n'
+                 #                '  retries: 5\n  delay: 30\n  get_url:')),
+                 (' +checksum:.*', '')],
+                **kwargs))
+        r.resolve_steps()
 
-    # The last of the things, run only once
-    kwargs['max_attempts'] = 1
-    r.load_step(steps.SimpleCommandStep(
-                     'run-playbooks',
-                     './scripts/run-playbooks.sh',
-                     **kwargs))
+        # The last of the things, run only once
+        kwargs['max_attempts'] = 1
+        r.load_step(steps.SimpleCommandStep(
+                         'run-playbooks',
+                         './scripts/run-playbooks.sh',
+                         **kwargs))
+
     r.resolve_steps()
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--configure-only', dest='configure_only',
+                        default=False, action='store_true',
+                        help='Stop after configuring OSA')
+    ARGS, extras = parser.parse_known_args()
+
+    # We really like persistent sessions
     if ('TMUX' not in os.environ) and ('STY' not in os.environ):
         sys.exit('Only run ostrich in a screen or tmux session please')
 
