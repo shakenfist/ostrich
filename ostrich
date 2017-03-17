@@ -235,7 +235,8 @@ def main(screen):
             **kwargs)
         ]
 
-    # Release specific steps
+    #########################################################################
+    # Release specific steps: Newton
     if r.complete['osa-branch'] == 'stable/newton':
         nextsteps.append(
             steps.SimpleCommandStep(
@@ -253,6 +254,9 @@ def main(screen):
                 'command: /bin/true',
                 **kwargs)
             )
+
+    #########################################################################
+    # Release specific steps: Mitaka
     elif r.complete['osa-branch'] == 'stable/mitaka':
         p = urlparse.urlparse(r.complete['git-mirror-github'])
         mirror_host_github = p.netloc.split(':')[0]
@@ -283,6 +287,15 @@ def main(screen):
                 **kwargs)
             )
 
+        nextsteps.append(
+            steps.FileAppendStep(
+                'enable-ironic-mitaka',
+                'etc/openstack_deploy/user_variables.yml',
+                '\n\nnova_virt_type: ironic\n',
+                **kwargs)
+            )
+
+    #########################################################################
     nextsteps.append(
         steps.RegexpEditorStep(
             'lxc-cachable-downloads',

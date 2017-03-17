@@ -174,3 +174,18 @@ class BulkRegexpEditorStep(Step):
                         changes += 1
 
         return changes
+
+
+
+class FileAppendStep(Step):
+    def __init__(self, name, path, text, depends=None, cwd=None, env=None):
+        super(FileAppendStep, self).__init__(name, depends)
+        self.path = path
+        if cwd:
+            self.path = os.path.join(cwd, path)
+        self.text = text
+
+    def run(self, emit, screen):
+        with open(self.path, 'a+') as f:
+            f.write(self.text)
+        return True
