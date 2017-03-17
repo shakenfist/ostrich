@@ -212,14 +212,14 @@ def main(screen):
             steps.FileAppendStep(
                 'proxy-environment',
                 '/etc/environment',
-                (('export http_proxy="%(proxy)s"'
-                  'export https_proxy="%(proxy)s"'
-                  'export HTTP_PROXY="%(proxy)s"'
-                  'export HTTPS_PROXY="%(proxy)s"'
-                  'export ftp_proxy="%(proxy)s"'
-                  'export FTP_PROXY="%(proxy)s"'
-                  'export no_proxy=localhost'
-                  'export NO_PROXY=localhost')
+                (('\n\nexport http_proxy="%(proxy)s"\n'
+                  'export https_proxy="%(proxy)s"\n'
+                  'export HTTP_PROXY="%(proxy)s"\n'
+                  'export HTTPS_PROXY="%(proxy)s"\n'
+                  'export ftp_proxy="%(proxy)s"\n'
+                  'export FTP_PROXY="%(proxy)s"\n'
+                  'export no_proxy=localhost\n'
+                  'export NO_PROXY=localhost\n')
                  % {'proxy': r.complete['http-proxy']}),
                 **kwargs)
             )
