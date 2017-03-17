@@ -229,7 +229,7 @@ def main(screen):
             '/opt/openstack-ansible',
             '.*\.(ini|yml|sh)$',
             [
-                ('%s/cgit' * r.complete['git-mirror-openstack'],
+                ('%s/cgit' % r.complete['git-mirror-openstack'],
                  'https://git.openstack.org/cgit')
             ],
             **kwargs)
