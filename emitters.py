@@ -1,15 +1,9 @@
 import curses
 import datetime
-import fcntl
-import json
+imrtpo gzip
 import os
-import psutil
-import re
-import select
-import subprocess
 import sys
 import textwrap
-import time
 
 class NoopEmitter(object):
     def __init__(self, progname, output):
@@ -37,8 +31,9 @@ class Emitter(NoopEmitter):
     def logger(self, logfile):
         if self.logfile:
             self.logfile.close()
-        self.logfile = open(os.path.expanduser('~/.%s/%s'
-                                               % (self.progname, logfile)), 'w')
+        self.logfile = gzip.open(
+            os.path.expanduser('~/.%s/%s.gz'
+                               % (self.progname, logfile)), 'w')
 
     def emit(self, s):
         height, width = self.output.getmaxyx()
