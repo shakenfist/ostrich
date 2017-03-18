@@ -313,6 +313,14 @@ def main(screen):
                 **kwargs)
             )
 
+        nextsteps.append(
+            steps.FileAppendStep(
+                'group-vars-ironic_service_user_name',
+                'playbooks/inventory/group_vars/all.yml',
+                '\n\nironic_service_user_name: ironic',
+                **kwargs)
+            )
+
     #########################################################################
     nextsteps.append(
         steps.RegexpEditorStep(
