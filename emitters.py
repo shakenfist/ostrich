@@ -1,6 +1,6 @@
 import curses
 import datetime
-imrtpo gzip
+import gzip
 import os
 import sys
 import textwrap
