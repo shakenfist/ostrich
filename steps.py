@@ -6,6 +6,7 @@ import os
 import psutil
 import re
 import select
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -188,4 +189,23 @@ class FileAppendStep(Step):
     def run(self, emit, screen):
         with open(self.path, 'a+') as f:
             f.write(self.text)
+        return True
+
+
+
+class CopyFileStep(Step):
+    def __init__(self, name, from_path, to_path, depends=None, cwd=None,
+                 env=None):
+        super(CopyFileStep, self).__init__(name, depends)
+
+        self.from_path = from_path
+        if cwd and not self.from_path.startswith('/'):
+            self.from_path = os.path.join(cwd, from_path)
+
+        self.to_path = to_path
+        if cwd and not self.to_path.startswith('/'):
+            self.to_path = os.path.join(cwd, to_path)
+
+    def run(self, emit, screen):
+        shutil.copyfile(self.from_path, self.to_path)
         return True

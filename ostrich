@@ -368,13 +368,23 @@ def main(screen):
                 ],
                 **kwargs))
 
-        r.load_step(
-            steps.FileAppendStep(
-                'enable-ironic-harder-mitaka',
-                '/etc/openstack_deploy/user_variables.yml',
-                '\n\nnova_virt_type: ironic\n',
-                **kwargs)
-            )
+        #####################################################################
+        # Release specific steps: Mitaka
+        if r.complete['osa-branch'] == 'stable/mitaka':
+            r.load_step(
+                steps.FileAppendStep(
+                    'enable-ironic-harder-mitaka',
+                    '/etc/openstack_deploy/user_variables.yml',
+                    '\n\nnova_virt_type: ironic\n',
+                    **kwargs)
+                )
+            r.load_step(
+                steps.CopyFileStep(
+                    'enable-ironic-environment-mitaka',
+                    'etc/openstack_deploy/env.d/ironic.yml',
+                    '/etc/openstack_deploy/env.d/ironic.yml',
+                    **kwargs)
+                )
 
         r.resolve_steps()
 
