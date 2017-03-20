@@ -15,6 +15,7 @@
 # An OpenStack ansible install runner
 #
 
+import argparse
 import curses
 import datetime
 import fcntl
@@ -34,6 +35,7 @@ import steps
 
 
 progname = os.path.basename(__file__)
+ARGS = None
 
 
 class Runner(object):
@@ -206,20 +208,38 @@ def main(screen):
         kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
                               'https_proxy': r.complete['http-proxy']})
 
+        r.load_step(
+            steps.FileAppendStep(
+                'proxy-environment',
+                '/etc/environment',
+                (('\n\nexport http_proxy="%(proxy)s"\n'
+                  'export https_proxy="%(proxy)s"\n'
+                  'export HTTP_PROXY="%(proxy)s"\n'
+                  'export HTTPS_PROXY="%(proxy)s"\n'
+                  'export ftp_proxy="%(proxy)s"\n'
+                  'export FTP_PROXY="%(proxy)s"\n'
+                  'export no_proxy=localhost\n'
+                  'export NO_PROXY=localhost\n')
+                 % {'proxy': r.complete['http-proxy']}),
+                **kwargs)
+            )
+
     nextsteps = [
         steps.SimpleCommandStep(
             'git-checkout-osa',
             'git checkout %s' % r.complete['osa-branch'],
             **kwargs),
         steps.BulkRegexpEditorStep(
-            'apply-git-mirrors-to-osa',
+            'bulk-edit-osa',
             '/opt/openstack-ansible',
             '.*\.(ini|yml|sh)$',
             [
                 ('(http|https|git)://github.com',
                  r.complete['git-mirror-github']),
                 ('(http|https|git)://git.openstack.org',
-                 r.complete['git-mirror-openstack'])
+                 r.complete['git-mirror-openstack']),
+                ('https://rpc-repo.rackspace.com',
+                 'http://rpc-repo.rackspace.com'),
             ],
             **kwargs),
         steps.BulkRegexpEditorStep(
@@ -227,17 +247,18 @@ def main(screen):
             '/opt/openstack-ansible',
             '.*\.(ini|yml|sh)$',
             [
-                ('%s/cgit' * r.complete['git-mirror-openstack'],
+                ('%s/cgit' % r.complete['git-mirror-openstack'],
                  'https://git.openstack.org/cgit')
             ],
             **kwargs)
         ]
 
-    # Release specific steps
+    #########################################################################
+    # Release specific steps: Newton
     if r.complete['osa-branch'] == 'stable/newton':
         nextsteps.append(
             steps.SimpleCommandStep(
-                'fixup-add-ironic',
+                'fixup-add-ironic-newton',
                 ('sed -i -e "/- name: heat.yml.aio/ a \        '
                  '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
                 **kwargs)
@@ -251,6 +272,9 @@ def main(screen):
                 'command: /bin/true',
                 **kwargs)
             )
+
+    #########################################################################
+    # Release specific steps: Mitaka
     elif r.complete['osa-branch'] == 'stable/mitaka':
         p = urlparse.urlparse(r.complete['git-mirror-github'])
         mirror_host_github = p.netloc.split(':')[0]
@@ -274,12 +298,30 @@ def main(screen):
                     **kwargs)
                 )
 
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'bootstrap-ansible',
-            './scripts/bootstrap-ansible.sh',
-            **kwargs)
-        )
+        nextsteps.append(
+            steps.SimpleCommandStep(
+                'fixup-add-ironic-mitaka',
+                """sed -i -e '/swift_conf_overrides | default/ a \\    - name: ironic.yml.aio\\n      override: "{{ ironic_conf_overrides | default({}) }}"'  tests/roles/bootstrap-host/tasks/prepare_aio_config.yml""",
+                **kwargs)
+            )
+
+        nextsteps.append(
+            steps.FileAppendStep(
+                'enable-ironic-mitaka',
+                'etc/openstack_deploy/user_variables.yml',
+                '\n\nnova_virt_type: ironic\n',
+                **kwargs)
+            )
+
+        nextsteps.append(
+            steps.FileAppendStep(
+                'group-vars-ironic_service_user_name',
+                'playbooks/inventory/group_vars/all.yml',
+                '\n\nironic_service_user_name: ironic',
+                **kwargs)
+            )
+
+    #########################################################################
     nextsteps.append(
         steps.RegexpEditorStep(
             'lxc-cachable-downloads',
@@ -288,41 +330,81 @@ def main(screen):
             'wget_wrapper -T 30 -q --no-hsts http://',
             **kwargs)
         )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'bootstrap-aio',
-            './scripts/bootstrap-aio.sh',
-            **kwargs)
-        )
+
+    if not ARGS.configure_only:
+        nextsteps.append(
+            steps.SimpleCommandStep(
+                'bootstrap-ansible',
+                './scripts/bootstrap-ansible.sh',
+                **kwargs)
+            )
+        nextsteps.append(
+            steps.SimpleCommandStep(
+                'bootstrap-aio',
+                './scripts/bootstrap-aio.sh',
+                **kwargs)
+            )
 
     r.load_dependancy_chain(nextsteps, depends='git-clone-osa')
     r.resolve_steps()
 
-    # We also need to re-write git repos in a large number of roles
-    r.load_step(steps.BulkRegexpEditorStep(
-            'bulk-edit-roles',
-            '/etc/ansible',
-            '.*\.(ini|yml)$',
-            [('(http|https|git)://github.com',
-              r.complete['git-mirror-github']),
-             ('(http|https|git)://git.openstack.org',
-              r.complete['git-mirror-openstack']),
-             #('  get_url:', ('  until: get_url_result | success\n'
-             #                '  retries: 5\n  delay: 30\n  get_url:')),
-             (' +checksum:.*', '')],
-            **kwargs))
-    r.resolve_steps()
+    if not ARGS.configure_only:
+        # We also need to re-write git repos in a large number of roles
+        r.load_step(
+            steps.BulkRegexpEditorStep(
+                'bulk-edit-roles',
+                '/etc/ansible',
+                '.*\.(ini|yml)$',
+                [
+                    ('(http|https|git)://github.com',
+                     r.complete['git-mirror-github']),
+                    ('(http|https|git)://git.openstack.org',
+                     r.complete['git-mirror-openstack']),
+                    ('https://rpc-repo.rackspace.com',
+                     'http://rpc-repo.rackspace.com'),
+                    #('  get_url:', ('  until: get_url_result | success\n'
+                    #                '  retries: 5\n  delay: 30\n  get_url:')),
+                    (' +checksum:.*', '')
+                ],
+                **kwargs))
 
-    # The last of the things, run only once
-    kwargs['max_attempts'] = 1
-    r.load_step(steps.SimpleCommandStep(
-                     'run-playbooks',
-                     './scripts/run-playbooks.sh',
-                     **kwargs))
-    r.resolve_steps()
+        #####################################################################
+        # Release specific steps: Mitaka
+        if r.complete['osa-branch'] == 'stable/mitaka':
+            r.load_step(
+                steps.FileAppendStep(
+                    'enable-ironic-harder-mitaka',
+                    '/etc/openstack_deploy/user_variables.yml',
+                    '\n\nnova_virt_type: ironic\n',
+                    **kwargs)
+                )
+            r.load_step(
+                steps.CopyFileStep(
+                    'enable-ironic-environment-mitaka',
+                    'etc/openstack_deploy/env.d/ironic.yml',
+                    '/etc/openstack_deploy/env.d/ironic.yml',
+                    **kwargs)
+                )
+
+        r.resolve_steps()
+
+        # The last of the things, run only once
+        kwargs['max_attempts'] = 1
+        r.load_step(steps.SimpleCommandStep(
+                         'run-playbooks',
+                         './scripts/run-playbooks.sh',
+                         **kwargs))
+        r.resolve_steps()
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--configure-only', dest='configure_only',
+                        default=False, action='store_true',
+                        help='Stop after configuring OSA')
+    ARGS, extras = parser.parse_known_args()
+
+    # We really like persistent sessions
     if ('TMUX' not in os.environ) and ('STY' not in os.environ):
         sys.exit('Only run ostrich in a screen or tmux session please')
 
