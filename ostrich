@@ -391,9 +391,28 @@ def main(screen):
         # The last of the things, run only once
         kwargs['max_attempts'] = 1
         r.load_step(steps.SimpleCommandStep(
-                         'run-playbooks',
-                         './scripts/run-playbooks.sh',
-                         **kwargs))
+                'run-playbooks',
+                './scripts/run-playbooks.sh',
+                **kwargs))
+        r.resolve_steps()
+
+        # Debug output that might be helpful, not scripts are running from
+        # ostrich directory
+        kwargs['cwd'] = None
+        r.load_dependancy_chain(
+            [steps.SimpleCommandStep(
+                    'lxc-details',
+                    './lxc-details',
+                    **kwargs)),
+            steps.SimpleCommandStep(
+                    'pip-ruin-everything',
+                    'pip install python-openstackclient python-ironicclient',
+                    **kwargs)),
+            steps.SimpleCommandStep(
+                'openstack-details',
+                './lxc-details',
+                **kwargs)
+            ])
         r.resolve_steps()
 
 
