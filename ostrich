@@ -403,14 +403,14 @@ def main(screen):
             [steps.SimpleCommandStep(
                     'lxc-details',
                     './lxc-details',
-                    **kwargs)),
+                    **kwargs),
             steps.SimpleCommandStep(
                     'pip-ruin-everything',
                     'pip install python-openstackclient python-ironicclient',
-                    **kwargs)),
+                    **kwargs),
             steps.SimpleCommandStep(
                 'openstack-details',
-                './lxc-details',
+                './openstack-details',
                 **kwargs)
             ])
         r.resolve_steps()
