@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Dump details for the current state of LXC
+
+for container in `lxc-ls`
+do
+    echo "============================================================="
+    echo $container
+    echo "============================================================="
+
+    lxc-info -n $container
+    echo
+done
