@@ -402,16 +402,20 @@ def main(screen):
         r.load_dependancy_chain(
             [steps.SimpleCommandStep(
                     'lxc-details',
-                    './lxc-details',
+                    './helpers/lxc-details',
                     **kwargs),
-            steps.SimpleCommandStep(
+             steps.SimpleCommandStep(
                     'pip-ruin-everything',
                     'pip install python-openstackclient python-ironicclient',
                     **kwargs),
-            steps.SimpleCommandStep(
-                'openstack-details',
-                './openstack-details',
-                **kwargs)
+             steps.SimpleCommandStep(
+                    'openstack-details',
+                    './helpers/os-cmd-bootstrap',
+                    **kwargs)
+             steps.SimpleCommandStep(
+                    'openstack-details',
+                    './helpers/openstack-details',
+                    **kwargs)
             ])
         r.resolve_steps()
 

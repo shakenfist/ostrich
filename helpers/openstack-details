@@ -10,11 +10,6 @@ lxc-attach -n $utility_container cat /root/openrc | tee ~/.ostrich/openrc
 set +x
 
 . ~/.ostrich/openrc
-export HTTP_PROXY=
-export HTTPS_PROXY=
-export http_proxy=
-export https_proxy=
-
 echo "============================================================="
 echo "curl OS_AUTH_URL"
 echo "============================================================="
@@ -28,7 +23,7 @@ echo "============================================================="
 echo "catalog list"
 echo "============================================================="
 set -x
-openstack catalog list
+/opt/openstack-ansible/scripts/os-cmd openstack catalog list
 set +x
 echo
 
@@ -36,7 +31,7 @@ echo "============================================================="
 echo "endpoint list"
 echo "============================================================="
 set -x
-openstack endpoint list
+/opt/openstack-ansible/scripts/os-cmd openstack endpoint list
 set +x
 echo
 
@@ -44,7 +39,7 @@ echo "============================================================="
 echo "server list"
 echo "============================================================="
 set -x
-openstack server list
+/opt/openstack-ansible/scripts/os-cmd openstack server list
 set +x
 echo
 
@@ -52,7 +47,7 @@ echo "============================================================="
 echo "image list"
 echo "============================================================="
 set -x
-openstack image list
+/opt/openstack-ansible/scripts/os-cmd openstack image list
 set +x
 echo
 
@@ -60,6 +55,6 @@ echo "============================================================="
 echo "baremetal node list"
 echo "============================================================="
 set -x
-openstack baremetal node list
+/opt/openstack-ansible/scripts/os-cmd openstack baremetal list
 set +x
 echo

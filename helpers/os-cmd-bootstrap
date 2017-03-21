@@ -1,0 +1,7 @@
+#!/bin/bash
+
+if [ ! -e /opt/openstack-ansible/scripts/os-cmd ]
+then
+    echo "Using a cached copy of os-cmd"
+    cp helpers/os-cmd /opt/openstack-ansible/scripts/
+fi
