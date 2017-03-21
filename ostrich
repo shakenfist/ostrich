@@ -425,10 +425,14 @@ if __name__ == '__main__':
     parser.add_argument('--configure-only', dest='configure_only',
                         default=False, action='store_true',
                         help='Stop after configuring OSA')
+    parser.add_argument('--no-screen', dest='no_screen',
+                        default=False, action='store_true',
+                        help='Do not force me to use screen or tmux')
     ARGS, extras = parser.parse_known_args()
 
     # We really like persistent sessions
-    if ('TMUX' not in os.environ) and ('STY' not in os.environ):
-        sys.exit('Only run ostrich in a screen or tmux session please')
+    if not ARGS.no_screen:
+        if ('TMUX' not in os.environ) and ('STY' not in os.environ):
+            sys.exit('Only run ostrich in a screen or tmux session please')
 
     curses.wrapper(main)
