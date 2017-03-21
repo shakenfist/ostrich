@@ -125,7 +125,6 @@ def main(screen):
     screen.nodelay(False)
     r = Runner(screen)
 
-    # We really like screen around here
     r.load_step(steps.SimpleCommandStep(
             'apt-daily',
             ('while [ `ps -ef | grep apt.systemd.daily | '
