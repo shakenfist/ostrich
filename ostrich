@@ -411,7 +411,7 @@ def main(screen):
              steps.SimpleCommandStep(
                     'openstack-details',
                     './helpers/os-cmd-bootstrap',
-                    **kwargs)
+                    **kwargs),
              steps.SimpleCommandStep(
                     'openstack-details',
                     './helpers/openstack-details',
