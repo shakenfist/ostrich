@@ -380,6 +380,14 @@ def main(screen):
                  },
                 **kwargs)
             )
+        nextsteps.append(
+            steps.YamlUpdateDictionaryStep(
+                'add-network-cidr',
+                '/etc/openstack_deploy/openstack_user_config.yml',
+                ['cidr_networks'],
+                {'ironic': '192.168.51.0/24'},
+                **kwargs)
+            )
 
     r.load_dependancy_chain(nextsteps, depends='git-clone-osa')
     r.resolve_steps()

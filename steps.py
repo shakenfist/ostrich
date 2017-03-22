@@ -242,3 +242,35 @@ class YamlAddElementStep(Step):
             f.write(yaml.dump(y, default_flow_style=False))
 
         return True
+
+
+class YamlUpdateDictionaryStep(Step):
+    def __init__(self, name, path, target_element_path, data, depends=None,
+                 cwd=None, env=None):
+        super(YamlAddElementStep, self).__init__(name, depends)
+
+        self.path = path
+        if cwd and not self.path.startswith('/'):
+            self.path = os.path.join(cwd, path)
+
+        self.target_element_path = target_element_path
+        self.data = data
+
+    def run(self, emit, screen):
+        with open(self.path) as f:
+            y = yaml.load(f.read())
+
+        sub = y
+
+        for key in self.target_element_path:
+            sub = sub[key]
+
+        sub.update(self.data)
+
+        emit.emit('YAML after changes:')
+        emit.emit(yaml.dump(y))
+
+        with open(self.path, 'w') as f:
+            f.write(yaml.dump(y, default_flow_style=False))
+
+        return True
