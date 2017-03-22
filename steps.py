@@ -247,7 +247,7 @@ class YamlAddElementStep(Step):
 class YamlUpdateDictionaryStep(Step):
     def __init__(self, name, path, target_element_path, data, depends=None,
                  cwd=None, env=None):
-        super(YamlAddElementStep, self).__init__(name, depends)
+        super(YamlUpdateDictionaryStep, self).__init__(name, depends)
 
         self.path = path
         if cwd and not self.path.startswith('/'):
