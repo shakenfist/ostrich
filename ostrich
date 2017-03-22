@@ -368,9 +368,9 @@ def main(screen):
                 ['global_overrides', 'provider_networks'],
                 {'network':
                      {'group_binds': ['neutron_linuxbridge_agent',
-                                      'ironic_conductor_agent',
+                                      'ironic_conductor_container',
                                       'ironic_api_container'],
-                      'container_bridge': 'br_ironic',
+                      'container_bridge': 'br-ironic',
                       'container_type': 'veth',
                       'container_interface': 'eth12',
                       'type': 'flat',
@@ -386,6 +386,22 @@ def main(screen):
                 '/etc/openstack_deploy/openstack_user_config.yml',
                 ['cidr_networks'],
                 {'ironic': '192.168.51.0/24'},
+                **kwargs)
+            )
+        nextsteps.append(
+            steps.YamlAddElementStep(
+                'reserve-netblock-start',
+                '/etc/openstack_deploy/openstack_user_config.yml',
+                ['used_ips'],
+                '192.168.51.1,192.168.51.20',
+                **kwargs)
+            )
+        nextsteps.append(
+            steps.YamlAddElementStep(
+                'reserve-netblock-end',
+                '/etc/openstack_deploy/openstack_user_config.yml',
+                ['used_ips'],
+                '192.168.51.235,192.168.51.255',
                 **kwargs)
             )
 
