@@ -336,6 +336,18 @@ def main(screen):
             **kwargs)
         )
 
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'archive-upper-constraints',
+            ('curl https://git.openstack.org/cgit/openstack/requirements/'
+             'plain/upper-constraints.txt?id='
+             '$(awk \'/requirements_git_install_branch:/ {print $2}\' '
+             '/opt/openstack-ansible/playbooks/defaults/repo_packages/'
+             'openstack_services.yml) -o ~/.%s/upper-contraints.txt'
+             % progname),
+            **kwargs)
+        )
+
     if not ARGS.configure_only:
         nextsteps.append(
             steps.SimpleCommandStep(
@@ -401,9 +413,22 @@ def main(screen):
                 **kwargs))
         r.resolve_steps()
 
+        kwargs['cwd'] = None
+
+        #####################################################################
+        # Release specific steps: Mitaka
+        if r.complete['osa-branch'] == 'stable/mitaka':
+            r.load_step(
+                steps.SimpleCommandStep(
+                    'add-ironic-to-nova-venv',
+                    './helpers/add-ironic-to-nova-venv',
+                    **kwargs)
+                )
+
+            r.resolve_steps()
+
         # Debug output that might be helpful, not scripts are running from
         # ostrich directory
-        kwargs['cwd'] = None
         r.load_dependancy_chain(
             [steps.SimpleCommandStep(
                     'lxc-details',
