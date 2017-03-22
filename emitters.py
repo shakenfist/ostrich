@@ -72,7 +72,7 @@ class Emitter(LoggingEmitter):
         return answer
 
 
-class SimpleEmitter(NoopEmitter):
+class SimpleEmitter(LoggingEmitter):
     def clear(self):
         sys.stdout.write('-----------------------------------------------\n')
 
