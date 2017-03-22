@@ -239,6 +239,6 @@ class YamlAddElementStep(Step):
         emit.emit(yaml.dump(y))
 
         with open(self.path, 'w') as f:
-            f.write(yaml.dump(y))
+            f.write(yaml.dump(y, default_flow_style=False))
 
         return True
