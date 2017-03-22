@@ -65,7 +65,7 @@ class SimpleCommandStep(Step):
 
         obj.stdin.close()
         while obj.poll() is None:
-            readable, _, _ = select.select([obj.stderr, obj.stdout], [], [], 0)
+            readable, _, _ = select.select([obj.stderr, obj.stdout], [], [], 1)
             for f in readable:
                 emit.emit(os.read(f.fileno(), 10000))
 
