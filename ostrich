@@ -361,6 +361,25 @@ def main(screen):
                 './scripts/bootstrap-aio.sh',
                 **kwargs)
             )
+        nextsteps.append(
+            steps.YamlAddElementStep(
+                'add-provider-network',
+                '/etc/openstack_deploy/openstack_user_config.yml',
+                ['global_overrides', 'provider_networks'],
+                {'network':
+                     {'group_binds': ['neutron_linuxbridge_agent',
+                                      'ironic_conductor_agent',
+                                      'ironic_api_container'],
+                      'container_bridge': 'br_ironic',
+                      'container_type': 'veth',
+                      'container_interface': 'eth12',
+                      'type': 'flat',
+                      'net_name': 'ironic',
+                      'ip_from_q': 'ironic'
+                      }
+                 },
+                **kwargs)
+            )
 
     r.load_dependancy_chain(nextsteps, depends='git-clone-osa')
     r.resolve_steps()
