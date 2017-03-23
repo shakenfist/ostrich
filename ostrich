@@ -404,6 +404,12 @@ def main(screen):
                 '192.168.51.235,192.168.51.255',
                 **kwargs)
             )
+        nextsteps.append(
+            steps.SimpleCommandStep(
+                'add-ironic-bridge',
+                'brctl addbr br-ironic',
+                **kwargs)
+            )
 
     r.load_dependancy_chain(nextsteps, depends='git-clone-osa')
     r.resolve_steps()
