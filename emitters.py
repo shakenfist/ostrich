@@ -24,16 +24,18 @@ class NoopEmitter(object):
         return None
 
 
-class Emitter(NoopEmitter):
-    def clear(self):
-        self.output.clear()
-
+class LoggingEmitter(NoopEmitter):
     def logger(self, logfile):
         if self.logfile:
             self.logfile.close()
         self.logfile = gzip.open(
             os.path.expanduser('~/.%s/%s.gz'
                                % (self.progname, logfile)), 'w')
+
+
+class Emitter(LoggingEmitter):
+    def clear(self):
+        self.output.clear()
 
     def emit(self, s):
         height, width = self.output.getmaxyx()
@@ -67,4 +69,24 @@ class Emitter(NoopEmitter):
         curses.echo()
         answer = self.output.getstr(height - 2, len(s) + 2)
         curses.noecho()
+        return answer
+
+
+class SimpleEmitter(LoggingEmitter):
+    def clear(self):
+        sys.stdout.write('-----------------------------------------------\n')
+
+    def emit(self, s):
+        for line in s.split('\n'):
+            line = ''.join([i if ord(i) < 128 else ' ' for i in line])
+
+            if self.logfile:
+                self.logfile.write('%s %s\n' % (datetime.datetime.now(), line))
+                self.logfile.flush()
+
+            sys.stdout.write('%s\n' % line)
+            sys.stdout.flush()
+
+    def getstr(self, s):
+        answer = raw_input(s)
         return answer
