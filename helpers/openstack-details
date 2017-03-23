@@ -23,7 +23,8 @@ echo "============================================================="
 echo "catalog list"
 echo "============================================================="
 set -x
-/opt/openstack-ansible/scripts/os-cmd openstack catalog list
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack catalog list
+echo "Exit code: $?"
 set +x
 echo
 
@@ -31,7 +32,8 @@ echo "============================================================="
 echo "endpoint list"
 echo "============================================================="
 set -x
-/opt/openstack-ansible/scripts/os-cmd openstack endpoint list
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack endpoint list
+echo "Exit code: $?"
 set +x
 echo
 
@@ -39,7 +41,8 @@ echo "============================================================="
 echo "server list"
 echo "============================================================="
 set -x
-/opt/openstack-ansible/scripts/os-cmd openstack server list
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack server list
+echo "Exit code: $?"
 set +x
 echo
 
@@ -47,7 +50,8 @@ echo "============================================================="
 echo "image list"
 echo "============================================================="
 set -x
-/opt/openstack-ansible/scripts/os-cmd openstack image list
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack image list
+echo "Exit code: $?"
 set +x
 echo
 
@@ -55,6 +59,7 @@ echo "============================================================="
 echo "baremetal node list"
 echo "============================================================="
 set -x
-/opt/openstack-ansible/scripts/os-cmd openstack baremetal list
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack baremetal list
+echo "Exit code: $?"
 set +x
 echo
