@@ -500,7 +500,7 @@ def main(screen):
                     'pip install python-openstackclient python-ironicclient',
                     **kwargs),
              steps.SimpleCommandStep(
-                    'openstack-details',
+                    'os-cmd-bootstrap',
                     './helpers/os-cmd-bootstrap',
                     **kwargs),
              steps.SimpleCommandStep(
