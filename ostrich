@@ -410,6 +410,18 @@ def main(screen):
                 'brctl addbr br-ironic',
                 **kwargs)
             )
+        nextsteps.append(
+            steps.SimpleCommandStep(
+                'add-ironic-bridge-nic',
+                'brctl addif br-ironic eth1',
+                **kwargs)
+            )
+        nextsteps.append(
+            steps.SimpleCommandStep(
+                'add-ironic-bridge-ip',
+                'ifconfig br-ironic inet 192.168.51.1 up',
+                **kwargs)
+            )
 
     r.load_dependancy_chain(nextsteps, depends='git-clone-osa')
     r.resolve_steps()
