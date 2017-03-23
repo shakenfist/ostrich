@@ -502,8 +502,14 @@ def main(screen):
              steps.SimpleCommandStep(
                     'os-cmd-bootstrap',
                     './helpers/os-cmd-bootstrap',
-                    **kwargs),
-             steps.SimpleCommandStep(
+                    **kwargs)
+             ])
+        r.resolve_steps()
+
+        kwargs['max_attempts'] = 5
+        kwargs['failing_step_delay'] = 300
+        r.load_dependancy_chain(
+            [steps.SimpleCommandStep(
                     'openstack-details',
                     './helpers/openstack-details',
                     **kwargs)

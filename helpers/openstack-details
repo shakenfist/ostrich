@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 utility_container=`lxc-ls | grep utility`
 
@@ -63,3 +63,7 @@ timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack baremetal list
 echo "Exit code: $?"
 set +x
 echo
+
+echo "============================================================="
+echo "EOF"
+echo "============================================================="
