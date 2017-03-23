@@ -419,7 +419,7 @@ def main(screen):
         nextsteps.append(
             steps.SimpleCommandStep(
                 'add-ironic-bridge-ip',
-                'ifconfig br-ironic inet 192.168.51.1 up',
+                'ifconfig br-ironic inet 192.168.51.3 up',
                 **kwargs)
             )
 
