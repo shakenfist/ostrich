@@ -44,7 +44,7 @@ class Step(object):
             emit.emit('... repeatedly failed step, giving up')
             sys.exit(1)
 
-        self._run(emit, screen)
+        return self._run(emit, screen)
 
 
 class SimpleCommandStep(Step):
@@ -205,7 +205,7 @@ class CopyFileStep(Step):
     def __init__(self, name, from_path, to_path, **kwargs):
         super(CopyFileStep, self).__init__(name, **kwargs)
         self.from_path = _handle_path_in_cwd(from_path, kwargs.get('cwd'))
-        self.to_path = _handle_path_in_cwd(pto_ath, kwargs.get('cwd'))
+        self.to_path = _handle_path_in_cwd(to_path, kwargs.get('cwd'))
 
     def _run(self, emit, screen):
         shutil.copyfile(self.from_path, self.to_path)
