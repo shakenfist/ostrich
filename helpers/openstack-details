@@ -14,7 +14,7 @@ echo "============================================================="
 echo "curl OS_AUTH_URL"
 echo "============================================================="
 set -x
-curl $OS_AUTH_URL
+curl -m 10 $OS_AUTH_URL
 set +x
 echo
 echo
