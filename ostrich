@@ -401,7 +401,7 @@ def main(screen):
 
         # Release specific steps: Mitaka
         if r.complete['osa-branch'] == 'stable/mitaka':
-            r.load_step(
+            nextsteps.append(
                 steps.FileAppendStep(
                     'enable-ironic',
                     'tests/roles/bootstrap-host/templates/user_variables.aio.yml',
