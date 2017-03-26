@@ -7,6 +7,8 @@ echo "openrc"
 echo "============================================================="
 set -x
 lxc-attach -n $utility_container cat /root/openrc | tee ~/.ostrich/openrc
+cp -Rp /etc/openstack_deploy ~/.ostrich/
+chmod -R ugo+r ~/.ostrich
 set +x
 
 . ~/.ostrich/openrc
