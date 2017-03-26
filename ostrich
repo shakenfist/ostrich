@@ -215,14 +215,14 @@ def main(screen):
          ])
     r.resolve_steps()
 
-    next_steps = []
+    nextsteps = []
 
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
         kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
                               'https_proxy': r.complete['http-proxy']})
 
         # This entry will only last until it is clobbered by ansible
-        next_steps.append(
+        nextsteps.append(
             steps.FileAppendStep(
                 'proxy-environment',
                 '/etc/environment',
@@ -238,7 +238,7 @@ def main(screen):
                 **kwargs)
             )
 
-    next_steps.append(
+    nextsteps.append(
         steps.BulkRegexpEditorStep(
             'bulk-edit-osa',
             '/opt/openstack-ansible',
@@ -254,7 +254,7 @@ def main(screen):
             **kwargs)
         )
 
-    next_steps.append(
+    nextsteps.append(
         steps.BulkRegexpEditorStep(
             'unapply-git-mirrors-for-cgit',
             '/opt/openstack-ansible',
@@ -268,7 +268,7 @@ def main(screen):
 
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
         # This is the more permanent way of doing this
-        next_steps.append(
+        nextsteps.append(
             steps.FileAppendStep(
                 'proxy-environment-via-ansible',
                 'etc/openstack_deploy/user_variables.yml',
@@ -289,7 +289,7 @@ def main(screen):
                 **kwargs)
             )
 
-    next_steps.append(
+    nextsteps.append(
         steps.FileAppendStep(
             'osa-debug-mode',
             'etc/openstack_deploy/user_variables.yml',
