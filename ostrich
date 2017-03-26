@@ -227,8 +227,8 @@ def main(screen):
                 'proxy-environment',
                 '/etc/environment',
                 (('\n\nexport http_proxy="%(proxy)s"\n'
-                  'export https_proxy="%(proxy)s"\n'
                   'export HTTP_PROXY="%(proxy)s"\n'
+                  'export https_proxy="%(proxy)s"\n'
                   'export HTTPS_PROXY="%(proxy)s"\n'
                   'export ftp_proxy="%(proxy)s"\n'
                   'export FTP_PROXY="%(proxy)s"\n'
