@@ -195,6 +195,10 @@ class FileAppendStep(Step):
         self.text = text
 
     def _run(self, emit, screen):
+        if not os.path.exists(self.path):
+            emit.emit('%s does not exist' % self.path)
+            return False
+
         with open(self.path, 'a+') as f:
             f.write(self.text)
         return True
