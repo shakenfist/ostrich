@@ -266,38 +266,6 @@ def main(screen):
             **kwargs)
         )
 
-    if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
-        # This is the more permanent way of doing this
-        nextsteps.append(
-            steps.FileAppendStep(
-                'proxy-environment-via-ansible',
-                'etc/openstack_deploy/user_variables.yml',
-                (('\n\n'
-                  'no_proxy_env: "localhost,127.0.0.1,{{ '
-                  'internal_lb_vip_address }},{{ external_lb_vip_address }},'
-                  '{%% for host in groups[\'all_containers\'] %%}'
-                  '{{ hostvars[host][\'container_address\'] }}'
-                  '{%% if not loop.last %%},{%% endif %%}{%% endfor %%}"\n'
-                  'global_environment_variables:\n'
-                  '  HTTPS_PROXY: "%(proxy)s"\n'
-                  '  https_proxy: "%(proxy)s"\n'
-                  '  HTTP_PROXY: "%(proxy)s"\n'
-                  '  http_proxy: "%(proxy)s"\n'
-                  '  NO_PROXY: "{{ no_proxy_env }}"\n'
-                  '  no_proxy: "{{ no_proxy_env }}"')
-                 % {'proxy': r.complete['http-proxy']}),
-                **kwargs)
-            )
-
-    nextsteps.append(
-        steps.FileAppendStep(
-            'osa-debug-mode',
-            'etc/openstack_deploy/user_variables.yml',
-            '\n\ndebug: true\nverbose:true',
-            **kwargs)
-        )
-
-
     #########################################################################
     # Release specific steps: Newton
     if r.complete['osa-branch'] == 'stable/newton':
@@ -347,14 +315,6 @@ def main(screen):
             steps.SimpleCommandStep(
                 'fixup-add-ironic-mitaka',
                 """sed -i -e '/swift_conf_overrides | default/ a \\    - name: ironic.yml.aio\\n      override: "{{ ironic_conf_overrides | default({}) }}"'  tests/roles/bootstrap-host/tasks/prepare_aio_config.yml""",
-                **kwargs)
-            )
-
-        nextsteps.append(
-            steps.FileAppendStep(
-                'enable-ironic-mitaka',
-                'etc/openstack_deploy/user_variables.yml',
-                '\n\nnova_virt_type: ironic\n',
                 **kwargs)
             )
 
@@ -493,11 +453,44 @@ def main(screen):
                 **kwargs))
 
         #####################################################################
+        # Steps which configure user_variables.yml
+
+        if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
+            # This is the more permanent way of doing this
+            nextsteps.append(
+                steps.FileAppendStep(
+                    'proxy-environment-via-ansible',
+                    'etc/openstack_deploy/user_variables.yml',
+                    (('\n\n'
+                      'no_proxy_env: "localhost,127.0.0.1,{{ '
+                      'internal_lb_vip_address }},{{ external_lb_vip_address }},'
+                      '{%% for host in groups[\'all_containers\'] %%}'
+                      '{{ hostvars[host][\'container_address\'] }}'
+                      '{%% if not loop.last %%},{%% endif %%}{%% endfor %%}"\n'
+                      'global_environment_variables:\n'
+                      '  HTTPS_PROXY: "%(proxy)s"\n'
+                      '  https_proxy: "%(proxy)s"\n'
+                      '  HTTP_PROXY: "%(proxy)s"\n'
+                      '  http_proxy: "%(proxy)s"\n'
+                      '  NO_PROXY: "{{ no_proxy_env }}"\n'
+                      '  no_proxy: "{{ no_proxy_env }}"')
+                     % {'proxy': r.complete['http-proxy']}),
+                    **kwargs)
+                )
+
+        nextsteps.append(
+            steps.FileAppendStep(
+                'osa-debug-mode',
+                'etc/openstack_deploy/user_variables.yml',
+                '\n\ndebug: true\nverbose:true',
+                **kwargs)
+            )
+
         # Release specific steps: Mitaka
         if r.complete['osa-branch'] == 'stable/mitaka':
             r.load_step(
                 steps.FileAppendStep(
-                    'enable-ironic-harder-mitaka',
+                    'enable-ironic-harder',
                     '/etc/openstack_deploy/user_variables.yml',
                     '\n\nnova_virt_type: ironic\n',
                     **kwargs)
@@ -509,6 +502,9 @@ def main(screen):
                     '/etc/openstack_deploy/env.d/ironic.yml',
                     **kwargs)
                 )
+
+
+
 
         r.resolve_steps()
 
