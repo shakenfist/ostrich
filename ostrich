@@ -283,10 +283,19 @@ def main(screen):
                   '  HTTP_PROXY: "%(proxy)s"\n'
                   '  http_proxy: "%(proxy)s"\n'
                   '  NO_PROXY: "{{ no_proxy_env }}"\n'
-                  '  no_proxy: "{{ no_proxy_env }}"\n')
+                  '  no_proxy: "{{ no_proxy_env }}"')
                  % {'proxy': r.complete['http-proxy']}),
                 **kwargs)
             )
+
+    next_steps.append(
+        steps.FileAppendStep(
+            'osa-debug-mode',
+            'etc/openstack_deploy/user_variables.yml',
+            '\n\ndebug: true\verbose:true',
+            **kwargs)
+        )
+
 
     #########################################################################
     # Release specific steps: Newton
