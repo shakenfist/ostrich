@@ -194,6 +194,13 @@ def main(screen):
     # Do the thing
     r.resolve_steps()
 
+    # Steps where we now have the OSA checkout
+    # ANSIBLE_ROLE_FETCH_MODE - git checkout ansible roles, don't use galaxy
+    # BOOTSTRAP_OPTS - specify ironic as Nova's virt type
+    kwargs = {'cwd': '/opt/openstack-ansible',
+              'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
+                      'BOOTSTRAP_OPTS': 'nova_virt_type=ironic'}}
+
     # Steps requiring data from earlier
     r.load_dependancy_chain(
         [steps.SimpleCommandStep(
@@ -203,17 +210,12 @@ def main(screen):
                      % r.complete['git-mirror-openstack'])),
          steps.SimpleCommandStep(
                 'git-checkout-osa',
-                'git checkout %s' % r.complete['osa-branch'])
+                'git checkout %s' % r.complete['osa-branch'],
+                **kwargs)
          ])
     r.resolve_steps()
 
-    # Steps where we now have the OSA checkout
-    # ANSIBLE_ROLE_FETCH_MODE - git checkout ansible roles, don't use galaxy
-    # BOOTSTRAP_OPTS - specify ironic as Nova's virt type
-    kwargs = {'cwd': '/opt/openstack-ansible',
-              'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
-                      'BOOTSTRAP_OPTS': 'nova_virt_type=ironic'}}
-    nextsteps = []
+    next_steps = []
 
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
         kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
