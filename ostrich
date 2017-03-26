@@ -201,7 +201,12 @@ def main(screen):
                     ('git clone %s/openstack/openstack-ansible '
                      '/opt/openstack-ansible'
                      % r.complete['git-mirror-openstack'])),
+         steps.SimpleCommandStep(
+                'git-checkout-osa',
+                'git checkout %s' % r.complete['osa-branch'],
+                **kwargs)
          ])
+    r.resolve_steps()
 
     # Steps where we now have the OSA checkout
     # ANSIBLE_ROLE_FETCH_MODE - git checkout ansible roles, don't use galaxy
@@ -209,11 +214,14 @@ def main(screen):
     kwargs = {'cwd': '/opt/openstack-ansible',
               'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
                       'BOOTSTRAP_OPTS': 'nova_virt_type=ironic'}}
+    nextsteps = []
+
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
         kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
                               'https_proxy': r.complete['http-proxy']})
 
-        r.load_step(
+        # This entry will only last until it is clobbered by ansible
+        next_steps.append(
             steps.FileAppendStep(
                 'proxy-environment',
                 '/etc/environment',
@@ -229,11 +237,7 @@ def main(screen):
                 **kwargs)
             )
 
-    nextsteps = [
-        steps.SimpleCommandStep(
-            'git-checkout-osa',
-            'git checkout %s' % r.complete['osa-branch'],
-            **kwargs),
+    next_steps.append(
         steps.BulkRegexpEditorStep(
             'bulk-edit-osa',
             '/opt/openstack-ansible',
@@ -246,7 +250,10 @@ def main(screen):
                 ('https://rpc-repo.rackspace.com',
                  'http://rpc-repo.rackspace.com'),
             ],
-            **kwargs),
+            **kwargs)
+        )
+
+    next_steps.append(
         steps.BulkRegexpEditorStep(
             'unapply-git-mirrors-for-cgit',
             '/opt/openstack-ansible',
@@ -256,7 +263,30 @@ def main(screen):
                  'https://git.openstack.org/cgit')
             ],
             **kwargs)
-        ]
+        )
+
+    if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
+        # This is the more permanent way of doing this
+        next_steps.append(
+            steps.FileAppendStep(
+                'proxy-environment-via-ansible',
+                'etc/openstack_deploy/user_variables.yml',
+                (('\n\n'
+                  'no_proxy_env: "localhost,127.0.0.1,{{ '
+                  'internal_lb_vip_address }},{{ external_lb_vip_address }},'
+                  '{% for host in groups[\'all_containers\'] %}'
+                  '{{ hostvars[host][\'container_address\'] }}'
+                  '{% if not loop.last %},{% endif %}{% endfor %}"\n'
+                  'global_environment_variables:\n'
+                  '  HTTPS_PROXY: "%(proxy)s"\n'
+                  '  https_proxy: "%(proxy)s"\n'
+                  '  HTTP_PROXY: "%(proxy)s"\n'
+                  '  http_proxy: "%(proxy)s"\n'
+                  '  NO_PROXY: "{{ no_proxy_env }}"\n'
+                  '  no_proxy: "{{ no_proxy_env }}"\n')
+                 % {'proxy': r.complete['http-proxy']}),
+                **kwargs)
+            )
 
     #########################################################################
     # Release specific steps: Newton
