@@ -203,8 +203,7 @@ def main(screen):
                      % r.complete['git-mirror-openstack'])),
          steps.SimpleCommandStep(
                 'git-checkout-osa',
-                'git checkout %s' % r.complete['osa-branch'],
-                **kwargs)
+                'git checkout %s' % r.complete['osa-branch'])
          ])
     r.resolve_steps()
 
