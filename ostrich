@@ -293,7 +293,7 @@ def main(screen):
         steps.FileAppendStep(
             'osa-debug-mode',
             'etc/openstack_deploy/user_variables.yml',
-            '\n\ndebug: true\verbose:true',
+            '\n\ndebug: true\nverbose:true',
             **kwargs)
         )
 
