@@ -202,7 +202,7 @@ def stage3_apt(r):
     nextsteps.append(
         steps.SimpleCommandStep('apt-update', 'apt-get update')
         )
-    nextstteps.append(
+    nextsteps.append(
         steps.SimpleCommandStep('apt-upgrade', 'apt-get upgrade -y')
         )
     nextsteps.append(
@@ -263,7 +263,6 @@ def main(screen):
               'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
                       'BOOTSTRAP_OPTS': 'nova_virt_type=ironic'}}
 
-    # Steps requiring data from earlier
     r.load_dependancy_chain(stage4_checkout_osa(r, **kwargs))
     r.resolve_steps()
 
@@ -424,7 +423,7 @@ def main(screen):
             nextsteps.append(
                 steps.FileAppendStep(
                     'proxy-environment-via-ansible',
-                    'tests/roles/bootstrap-host/templates/user_variables.aio.yml',
+                    '/etc/openstack_deploy/user_variables.yml',
                     (('\n\n'
                       'no_proxy_env: "localhost,127.0.0.1,{{ '
                       'internal_lb_vip_address }},{{ external_lb_vip_address }},'
@@ -445,8 +444,8 @@ def main(screen):
         nextsteps.append(
             steps.FileAppendStep(
                 'osa-debug-mode',
-                'tests/roles/bootstrap-host/templates/user_variables.aio.yml',
-                '\n\ndebug: true\nverbose:true',
+                '/etc/openstack_deploy/user_variables.yml',
+                '\n\ndebug: true\nverbose: true',
                 **kwargs)
             )
 
@@ -456,7 +455,7 @@ def main(screen):
             nextsteps.append(
                 steps.FileAppendStep(
                     'enable-ironic',
-                    'tests/roles/bootstrap-host/templates/user_variables.aio.yml',
+                    '/etc/openstack_deploy/user_variables.yml',
                     '\n\nnova_virt_type: ironic\n',
                     **kwargs)
                 )
