@@ -125,76 +125,138 @@ class Runner(object):
                 del self.steps[step_name]
 
 
+def stage1_before_anything(r):
+    """Things to do before attempting anything."""
+
+    nextsteps = []
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'apt-daily',
+            ('while [ `ps -ef | grep apt.systemd.daily | '
+             'grep -vc "grep"` -gt 0 ]; do '
+             'echo "Waiting for daily apt run to end"; sleep 10; done')
+            )
+        )
+    return nextsteps
+
+
+def stage2_user_questions(r):
+    """Things we need the user to tell us."""
+
+    nextsteps = []
+    nextsteps.append(
+        steps.QuestionStep(
+            'git-mirror-github',
+            'Are you running a local github.com mirror?',
+            ('Mirroring github.com speeds up setup on slow and '
+             'unreliable networks, but means that you have to '
+             'maintain a mirror somewhere on your corporate network. '
+             'If you are unsure, just enter "git://github.com" here. '
+             'Otherwise, we need an answer in the form of '
+             '<protocol>://<server>, for example '
+             'git://gitmirror.example.com'),
+            'Mirror URL'
+            )
+        )
+    nextsteps.append(
+        steps.QuestionStep(
+            'git-mirror-openstack',
+            'Are you running a local git.openstack.org mirror?',
+            ('Mirroring git.openstack.org speeds up setup on slow '
+             'and unreliable networks, but means that you have to '
+             'maintain a mirror somewhere on your corporate network. '
+             'If you are unsure, just enter '
+             '"git://git.openstack.org" here. Otherwise, we need an '
+             'answer in the form of <protocol>://<server>, for '
+             'example git://gitmirror.example.com'),
+            'Mirror URL'
+            )
+        )
+    nextsteps.append(
+        steps.QuestionStep(
+            'osa-branch',
+            'What OSA branch (or commit SHA) would you like to use?',
+            'Use stable/newton unless you know what you are doing.',
+            'OSA branch'
+            )
+        )
+    nextsteps.append(
+        steps.QuestionStep(
+            'http-proxy',
+            'Are you running a local http proxy?',
+            ('OSA will download large objects such as LXC base '
+             'images. If you have a slow network, or are on a '
+             'corporate network which requires a proxy, configure it '
+             'here with a URL like http://cache.example.com:3128 . '
+             'If you do not use a proxy, please enter "none" here.'),
+            'HTTP Proxy'
+            )
+         )
+    return nextsteps
+
+
+def stage3_apt(r):
+    """Prepare apt."""
+
+    nextsteps = []
+    nextsteps.append(
+        steps.SimpleCommandStep('apt-update', 'apt-get update')
+        )
+    nextstteps.append(
+        steps.SimpleCommandStep('apt-upgrade', 'apt-get upgrade -y')
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'apt-dist-upgrade',
+            'apt-get dist-upgrade -y'
+            )
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'apt-useful',
+            'apt-get install -y screen ack-grep git expect lxc'
+            )
+        )
+    return nextsteps
+
+
+def stage4_checkout_osa(r, **kwargs):
+    """Clone and checkout OSA."""
+
+    nextsteps = []
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'git-clone-osa',
+            ('git clone %s/openstack/openstack-ansible '
+             '/opt/openstack-ansible'
+             % r.complete['git-mirror-openstack'])
+            )
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'git-checkout-osa',
+            'git checkout %s' % r.complete['osa-branch'],
+            **kwargs
+            )
+        )
+    return nextsteps
+
+
 def main(screen):
     if not ARGS.no_curses:
         screen.nodelay(False)
 
     r = Runner(screen)
 
-    r.load_step(steps.SimpleCommandStep(
-            'apt-daily',
-            ('while [ `ps -ef | grep apt.systemd.daily | '
-             'grep -vc "grep"` -gt 0 ]; do '
-             'echo "Waiting for daily apt run to end"; sleep 10; done')
-            ))
+    r.load_dependancy_chain(stage1_before_anything(r))
     r.resolve_steps()
 
-    # git proxies
-    r.load_dependancy_chain(
-        [steps.QuestionStep(
-                    'git-mirror-github',
-                    'Are you running a local github.com mirror?',
-                    ('Mirroring github.com speeds up setup on slow and '
-                     'unreliable networks, but means that you have to '
-                     'maintain a mirror somewhere on your corporate network. '
-                     'If you are unsure, just enter "git://github.com" here. '
-                     'Otherwise, we need an answer in the form of '
-                     '<protocol>://<server>, for example '
-                     'git://gitmirror.example.com'),
-                    'Mirror URL'),
-         steps.QuestionStep(
-                     'git-mirror-openstack',
-                     'Are you running a local git.openstack.org mirror?',
-                     ('Mirroring git.openstack.org speeds up setup on slow '
-                      'and unreliable networks, but means that you have to '
-                      'maintain a mirror somewhere on your corporate network. '
-                      'If you are unsure, just enter '
-                      '"git://git.openstack.org" here. Otherwise, we need an '
-                      'answer in the form of <protocol>://<server>, for '
-                      'example git://gitmirror.example.com'),
-                     'Mirror URL'),
-         steps.QuestionStep(
-                     'osa-branch',
-                     'What OSA branch (or commit SHA) would you like to use?',
-                     'Use stable/newton unless you know what you are doing.',
-                     'OSA branch'),
-         steps.QuestionStep(
-                     'http-proxy',
-                     'Are you running a local http proxy?',
-                     ('OSA will download large objects such as LXC base '
-                      'images. If you have a slow network, or are on a '
-                      'corporate network which requires a proxy, configure it '
-                      'here with a URL like http://cache.example.com:3128 . '
-                      'If you do not use a proxy, please enter "none" here.'),
-                     'HTTP Proxy'),
-         ])
-
-    # APT commands
-    r.load_dependancy_chain(
-        [steps.SimpleCommandStep('apt-update', 'apt-get update'),
-         steps.SimpleCommandStep('apt-upgrade', 'apt-get upgrade -y'),
-         steps.SimpleCommandStep(
-                'apt-dist-upgrade',
-                'apt-get dist-upgrade -y'),
-         steps.SimpleCommandStep(
-                'apt-useful',
-                'apt-get install -y screen ack-grep git expect lxc')
-         ])
-
-    # Do the thing
+    r.load_dependancy_chain(stage2_user_questions(r))
     r.resolve_steps()
 
-    # Steps where we now have the OSA checkout
+    r.load_dependancy_chain(stage3_apt(r))
+    r.resolve_steps()
+
     # ANSIBLE_ROLE_FETCH_MODE - git checkout ansible roles, don't use galaxy
     # BOOTSTRAP_OPTS - specify ironic as Nova's virt type
     kwargs = {'cwd': '/opt/openstack-ansible',
@@ -202,17 +264,7 @@ def main(screen):
                       'BOOTSTRAP_OPTS': 'nova_virt_type=ironic'}}
 
     # Steps requiring data from earlier
-    r.load_dependancy_chain(
-        [steps.SimpleCommandStep(
-                    'git-clone-osa',
-                    ('git clone %s/openstack/openstack-ansible '
-                     '/opt/openstack-ansible'
-                     % r.complete['git-mirror-openstack'])),
-         steps.SimpleCommandStep(
-                'git-checkout-osa',
-                'git checkout %s' % r.complete['osa-branch'],
-                **kwargs)
-         ])
+    r.load_dependancy_chain(stage4_checkout_osa(r, **kwargs))
     r.resolve_steps()
 
     nextsteps = []
