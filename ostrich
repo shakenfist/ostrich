@@ -578,8 +578,8 @@ def main(screen):
                      r.complete['git-mirror-openstack']),
                     ('https://rpc-repo.rackspace.com',
                      'http://rpc-repo.rackspace.com'),
-                    #('  get_url:', ('  until: get_url_result | success\n'
-                    #                '  retries: 5\n  delay: 30\n  get_url:')),
+                    ('https://mirror.rackspace.com',
+                     'http://mirror.rackspace.com'),
                     (' +checksum:.*', '')
                 ],
                 **kwargs))
