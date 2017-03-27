@@ -598,9 +598,12 @@ def main(screen):
 
         # The last of the things, run only once
         kwargs['max_attempts'] = 1
-        r.load_step(steps.SimpleCommandStep(
+        r.load_step(
+            steps.AnsibleTimingSimpleCommandStep(
                 'run-playbooks',
                 './scripts/run-playbooks.sh',
+                os.path.expanduser('~/.%s/run-playbook-timings.json'
+                                   % progname),
                 **kwargs))
         r.resolve_steps()
 

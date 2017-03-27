@@ -59,6 +59,9 @@ class SimpleCommandStep(Step):
     def __str__(self):
         return 'step %s, depends on %s' % (self.name, self.depends)
 
+    def _output_analysis(self, d):
+        pass
+
     def _run(self, emit, screen):
         emit.emit('Running %s' % self)
         emit.emit('# %s\n' % self.command)
@@ -83,7 +86,9 @@ class SimpleCommandStep(Step):
         while obj.poll() is None:
             readable, _, _ = select.select([obj.stderr, obj.stdout], [], [], 1)
             for f in readable:
-                emit.emit(os.read(f.fileno(), 10000))
+                d = os.read(f.fileno(), 10000)
+                self._output_analysis(d)
+                emit.emit(d)
 
             seen = []
             for child in proc.children(recursive=True):
@@ -110,6 +115,42 @@ class SimpleCommandStep(Step):
         returncode = obj.returncode
         emit.emit('... exit code %d' % returncode)
         return returncode == 0
+
+
+EXECUTION_RE = re.compile('^\[Executing "(.*)" playbook\]$')
+RUN_TIME_RE = re.compile('^Run Time = ([0-9]+) seconds$')
+
+
+class AnsibleTimingSimpleCommandStep(SimpleCommandStep):
+    def __init__(self, name, command, timings_path, **kwargs):
+        super(AnsibleTimingSimpleCommandStep, self).__init__(
+            name, command, **kwargs)
+        self.playbook = None
+
+        self.timings = []
+        self.timings_path = timings_path
+        if os.path.exists(self.timings_path):
+            with open(self.timings_path, 'r') as f:
+                self.timings = json.loads(f.read())
+        
+
+    def _output_analysis(self, d):
+        for line in d.split('\n'):
+            m = EXECUTION_RE.match(line)
+            if m:
+                self.playbook = m.group(1)
+
+            m = RUN_TIME_RE.match(line)
+            if m and self.playbook:
+                self.timings.append((self.playbook, m.group(1)))
+
+    def _run(self, emit, screen):
+        res = super(AnsibleTimingSimpleCommandStep, self)._run(emit, screen)
+
+        with open(self.timings_path, 'w') as f:
+            f.write(json.dumps(self.timings, indent=4))
+
+        return res
 
 
 class QuestionStep(Step):
