@@ -242,7 +242,7 @@ def stage4_checkout_osa(r, **kwargs):
     return nextsteps
 
 
-def stage5_configure_osa_before_bootstrap(f, **kwargs):
+def stage5_configure_osa_before_bootstrap(r, **kwargs):
     """Do all the configuration we do before bootstrapping."""
 
     nextsteps = []
