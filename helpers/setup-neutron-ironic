@@ -1,0 +1,7 @@
+#!/bin/bash -x
+
+NET_ID=$(/opt/openstack-ansible/scripts/os-cmd neutron net-create --shared --provider:network_type flat --provider:physical_network ironic ironic_net | awk '/ id/ {print $4}')
+SUBNET_ID=$(/opt/openstack-ansible/scripts/os-cmd neutron subnet-create $NET_ID 192.168.51.0/24 --name ironic_subnet --ip-version=4 \
+--gateway=192.168.51.1 --allocation-pool start=192.168.51.21,end=192.168.51.234 --enable-dhcp | awk '/ id/ {print $4}')
+
+echo "Created network $NET_ID, subnet $SUBNET_ID"
