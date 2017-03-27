@@ -580,6 +580,8 @@ def main(screen):
                      'http://rpc-repo.rackspace.com'),
                     ('https://mirror.rackspace.com',
                      'http://mirror.rackspace.com'),
+                    ('https://bootstrap.pypa.io/get-pip.py',
+                     'http://192.168.50.1/pip/get-pip.py')
                     (' +checksum:.*', '')
                 ],
                 **kwargs))
