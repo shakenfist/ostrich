@@ -125,101 +125,140 @@ class Runner(object):
                 del self.steps[step_name]
 
 
-def main(screen):
-    if not ARGS.no_curses:
-        screen.nodelay(False)
+def stage1_before_anything(r):
+    """Things to do before attempting anything."""
 
-    r = Runner(screen)
-
-    r.load_step(steps.SimpleCommandStep(
+    nextsteps = []
+    nextsteps.append(
+        steps.SimpleCommandStep(
             'apt-daily',
             ('while [ `ps -ef | grep apt.systemd.daily | '
              'grep -vc "grep"` -gt 0 ]; do '
              'echo "Waiting for daily apt run to end"; sleep 10; done')
-            ))
-    r.resolve_steps()
+            )
+        )
+    return nextsteps
 
-    # git proxies
-    r.load_dependancy_chain(
-        [steps.QuestionStep(
-                    'git-mirror-github',
-                    'Are you running a local github.com mirror?',
-                    ('Mirroring github.com speeds up setup on slow and '
-                     'unreliable networks, but means that you have to '
-                     'maintain a mirror somewhere on your corporate network. '
-                     'If you are unsure, just enter "git://github.com" here. '
-                     'Otherwise, we need an answer in the form of '
-                     '<protocol>://<server>, for example '
-                     'git://gitmirror.example.com'),
-                    'Mirror URL'),
-         steps.QuestionStep(
-                     'git-mirror-openstack',
-                     'Are you running a local git.openstack.org mirror?',
-                     ('Mirroring git.openstack.org speeds up setup on slow '
-                      'and unreliable networks, but means that you have to '
-                      'maintain a mirror somewhere on your corporate network. '
-                      'If you are unsure, just enter '
-                      '"git://git.openstack.org" here. Otherwise, we need an '
-                      'answer in the form of <protocol>://<server>, for '
-                      'example git://gitmirror.example.com'),
-                     'Mirror URL'),
-         steps.QuestionStep(
-                     'osa-branch',
-                     'What OSA branch (or commit SHA) would you like to use?',
-                     'Use stable/newton unless you know what you are doing.',
-                     'OSA branch'),
-         steps.QuestionStep(
-                     'http-proxy',
-                     'Are you running a local http proxy?',
-                     ('OSA will download large objects such as LXC base '
-                      'images. If you have a slow network, or are on a '
-                      'corporate network which requires a proxy, configure it '
-                      'here with a URL like http://cache.example.com:3128 . '
-                      'If you do not use a proxy, please enter "none" here.'),
-                     'HTTP Proxy'),
-         ])
 
-    # APT commands
-    r.load_dependancy_chain(
-        [steps.SimpleCommandStep('apt-update', 'apt-get update'),
-         steps.SimpleCommandStep('apt-upgrade', 'apt-get upgrade -y'),
-         steps.SimpleCommandStep(
-                'apt-dist-upgrade',
-                'apt-get dist-upgrade -y'),
-         steps.SimpleCommandStep(
-                'apt-useful',
-                'apt-get install -y screen ack-grep git expect lxc')
-         ])
+def stage2_user_questions(r):
+    """Things we need the user to tell us."""
 
-    # Do the thing
-    r.resolve_steps()
+    nextsteps = []
+    nextsteps.append(
+        steps.QuestionStep(
+            'git-mirror-github',
+            'Are you running a local github.com mirror?',
+            ('Mirroring github.com speeds up setup on slow and '
+             'unreliable networks, but means that you have to '
+             'maintain a mirror somewhere on your corporate network. '
+             'If you are unsure, just enter "git://github.com" here. '
+             'Otherwise, we need an answer in the form of '
+             '<protocol>://<server>, for example '
+             'git://gitmirror.example.com'),
+            'Mirror URL'
+            )
+        )
+    nextsteps.append(
+        steps.QuestionStep(
+            'git-mirror-openstack',
+            'Are you running a local git.openstack.org mirror?',
+            ('Mirroring git.openstack.org speeds up setup on slow '
+             'and unreliable networks, but means that you have to '
+             'maintain a mirror somewhere on your corporate network. '
+             'If you are unsure, just enter '
+             '"git://git.openstack.org" here. Otherwise, we need an '
+             'answer in the form of <protocol>://<server>, for '
+             'example git://gitmirror.example.com'),
+            'Mirror URL'
+            )
+        )
+    nextsteps.append(
+        steps.QuestionStep(
+            'osa-branch',
+            'What OSA branch (or commit SHA) would you like to use?',
+            'Use stable/newton unless you know what you are doing.',
+            'OSA branch'
+            )
+        )
+    nextsteps.append(
+        steps.QuestionStep(
+            'http-proxy',
+            'Are you running a local http proxy?',
+            ('OSA will download large objects such as LXC base '
+             'images. If you have a slow network, or are on a '
+             'corporate network which requires a proxy, configure it '
+             'here with a URL like http://cache.example.com:3128 . '
+             'If you do not use a proxy, please enter "none" here.'),
+            'HTTP Proxy'
+            )
+         )
+    return nextsteps
 
-    # Steps requiring data from earlier
-    r.load_dependancy_chain(
-        [steps.SimpleCommandStep(
-                    'git-clone-osa',
-                    ('git clone %s/openstack/openstack-ansible '
-                     '/opt/openstack-ansible'
-                     % r.complete['git-mirror-openstack'])),
-         ])
 
-    # Steps where we now have the OSA checkout
-    # ANSIBLE_ROLE_FETCH_MODE - git checkout ansible roles, don't use galaxy
-    # BOOTSTRAP_OPTS - specify ironic as Nova's virt type
-    kwargs = {'cwd': '/opt/openstack-ansible',
-              'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
-                      'BOOTSTRAP_OPTS': 'nova_virt_type=ironic'}}
+def stage3_apt(r):
+    """Prepare apt."""
+
+    nextsteps = []
+    nextsteps.append(
+        steps.SimpleCommandStep('apt-update', 'apt-get update')
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep('apt-upgrade', 'apt-get upgrade -y')
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'apt-dist-upgrade',
+            'apt-get dist-upgrade -y'
+            )
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'apt-useful',
+            'apt-get install -y screen ack-grep git expect lxc'
+            )
+        )
+    return nextsteps
+
+
+def stage4_checkout_osa(r, **kwargs):
+    """Clone and checkout OSA."""
+
+    nextsteps = []
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'git-clone-osa',
+            ('git clone %s/openstack/openstack-ansible '
+             '/opt/openstack-ansible'
+             % r.complete['git-mirror-openstack'])
+            )
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'git-checkout-osa',
+            'git checkout %s' % r.complete['osa-branch'],
+            **kwargs
+            )
+        )
+    return nextsteps
+
+
+def stage5_configure_osa_before_bootstrap(r, **kwargs):
+    """Do all the configuration we do before bootstrapping."""
+
+    nextsteps = []
+
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
         kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
                               'https_proxy': r.complete['http-proxy']})
 
-        r.load_step(
+        # This entry will only last until it is clobbered by ansible
+        nextsteps.append(
             steps.FileAppendStep(
                 'proxy-environment',
                 '/etc/environment',
                 (('\n\nexport http_proxy="%(proxy)s"\n'
-                  'export https_proxy="%(proxy)s"\n'
                   'export HTTP_PROXY="%(proxy)s"\n'
+                  'export https_proxy="%(proxy)s"\n'
                   'export HTTPS_PROXY="%(proxy)s"\n'
                   'export ftp_proxy="%(proxy)s"\n'
                   'export FTP_PROXY="%(proxy)s"\n'
@@ -229,11 +268,7 @@ def main(screen):
                 **kwargs)
             )
 
-    nextsteps = [
-        steps.SimpleCommandStep(
-            'git-checkout-osa',
-            'git checkout %s' % r.complete['osa-branch'],
-            **kwargs),
+    nextsteps.append(
         steps.BulkRegexpEditorStep(
             'bulk-edit-osa',
             '/opt/openstack-ansible',
@@ -246,7 +281,10 @@ def main(screen):
                 ('https://rpc-repo.rackspace.com',
                  'http://rpc-repo.rackspace.com'),
             ],
-            **kwargs),
+            **kwargs)
+        )
+
+    nextsteps.append(
         steps.BulkRegexpEditorStep(
             'unapply-git-mirrors-for-cgit',
             '/opt/openstack-ansible',
@@ -256,7 +294,7 @@ def main(screen):
                  'https://git.openstack.org/cgit')
             ],
             **kwargs)
-        ]
+        )
 
     #########################################################################
     # Release specific steps: Newton
@@ -312,14 +350,6 @@ def main(screen):
 
         nextsteps.append(
             steps.FileAppendStep(
-                'enable-ironic-mitaka',
-                'etc/openstack_deploy/user_variables.yml',
-                '\n\nnova_virt_type: ironic\n',
-                **kwargs)
-            )
-
-        nextsteps.append(
-            steps.FileAppendStep(
                 'group-vars-ironic_service_user_name',
                 'playbooks/inventory/group_vars/all.yml',
                 '\n\nironic_service_user_name: ironic',
@@ -336,24 +366,205 @@ def main(screen):
             **kwargs)
         )
 
-    if not ARGS.configure_only:
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'archive-upper-constraints',
+            ('curl https://git.openstack.org/cgit/openstack/requirements/'
+             'plain/upper-constraints.txt?id='
+             '$(awk \'/requirements_git_install_branch:/ {print $2}\' '
+             '/opt/openstack-ansible/playbooks/defaults/repo_packages/'
+             'openstack_services.yml) -o ~/.%s/upper-contraints.txt'
+             % progname),
+            **kwargs)
+        )
+
+    return nextsteps
+
+
+def stage6_bootstrap(r, **kwargs):
+    """Bootstrap ansible and AIO."""
+
+    nextsteps = []
+
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'bootstrap-ansible',
+            './scripts/bootstrap-ansible.sh',
+            **kwargs)
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'bootstrap-aio',
+            './scripts/bootstrap-aio.sh',
+            **kwargs)
+        )
+
+    return nextsteps
+
+
+def stage7_user_variables(r, **kwargs):
+    """Configure user variables with all our special things."""
+
+    nextsteps = []
+
+    if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
+        # This is the more permanent way of doing this
         nextsteps.append(
-            steps.SimpleCommandStep(
-                'bootstrap-ansible',
-                './scripts/bootstrap-ansible.sh',
-                **kwargs)
-            )
-        nextsteps.append(
-            steps.SimpleCommandStep(
-                'bootstrap-aio',
-                './scripts/bootstrap-aio.sh',
+            steps.FileAppendStep(
+                'proxy-environment-via-ansible',
+                '/etc/openstack_deploy/user_variables.yml',
+                (('\n\n'
+                  'no_proxy_env: "localhost,127.0.0.1,{{ '
+                  'internal_lb_vip_address }},{{ external_lb_vip_address }},'
+                  '{%% for host in groups[\'all_containers\'] %%}'
+                  '{{ hostvars[host][\'container_address\'] }}'
+                  '{%% if not loop.last %%},{%% endif %%}{%% endfor %%}"\n'
+                  'global_environment_variables:\n'
+                  '  HTTPS_PROXY: "%(proxy)s"\n'
+                  '  https_proxy: "%(proxy)s"\n'
+                  '  HTTP_PROXY: "%(proxy)s"\n'
+                  '  http_proxy: "%(proxy)s"\n'
+                  '  NO_PROXY: "{{ no_proxy_env }}"\n'
+                  '  no_proxy: "{{ no_proxy_env }}"')
+                 % {'proxy': r.complete['http-proxy']}),
                 **kwargs)
             )
 
-    r.load_dependancy_chain(nextsteps, depends='git-clone-osa')
+    nextsteps.append(
+        steps.FileAppendStep(
+            'osa-debug-mode',
+            '/etc/openstack_deploy/user_variables.yml',
+            '\n\ndebug: true\nverbose: true',
+            **kwargs)
+        )
+
+
+    # Release specific steps: Mitaka
+    if r.complete['osa-branch'] == 'stable/mitaka':
+        nextsteps.append(
+            steps.FileAppendStep(
+                'enable-ironic',
+                '/etc/openstack_deploy/user_variables.yml',
+                '\n\nnova_virt_type: ironic\n',
+                **kwargs)
+            )
+
+    return nextsteps
+
+
+def stage8_ironic_networking(r, **kwargs):
+    """Configure all the special things for ironic networking."""
+
+    nextsteps = []
+
+    nextsteps.append(
+        steps.YamlAddElementStep(
+            'add-provider-network',
+            '/etc/openstack_deploy/openstack_user_config.yml',
+            ['global_overrides', 'provider_networks'],
+            {'network':
+                 {'group_binds': ['neutron_linuxbridge_agent',
+                                  'ironic_conductor_container',
+                                  'ironic_api_container'],
+                  'container_bridge': 'br-ironic',
+                  'container_type': 'veth',
+                  'container_interface': 'eth12',
+                  'type': 'flat',
+                  'net_name': 'ironic',
+                  'ip_from_q': 'ironic'
+                  }
+             },
+            **kwargs)
+        )
+    nextsteps.append(
+        steps.YamlUpdateDictionaryStep(
+            'add-network-cidr',
+            '/etc/openstack_deploy/openstack_user_config.yml',
+            ['cidr_networks'],
+            {'ironic': '192.168.51.0/24'},
+            **kwargs)
+        )
+    nextsteps.append(
+        steps.YamlAddElementStep(
+            'reserve-netblock-start',
+            '/etc/openstack_deploy/openstack_user_config.yml',
+            ['used_ips'],
+            '192.168.51.1,192.168.51.20',
+            **kwargs)
+        )
+    nextsteps.append(
+        steps.YamlAddElementStep(
+            'reserve-netblock-end',
+            '/etc/openstack_deploy/openstack_user_config.yml',
+            ['used_ips'],
+            '192.168.51.235,192.168.51.255',
+            **kwargs)
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'add-ironic-bridge',
+            'brctl addbr br-ironic',
+            **kwargs)
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'add-ironic-bridge-nic',
+            'brctl addif br-ironic eth1',
+            **kwargs)
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'add-ironic-interface-ip',
+            'ifconfig eth1 inet 192.168.51.3 up',
+            **kwargs)
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'add-ironic-bridge-ip',
+            'ifconfig br-ironic inet 192.168.51.4 up',
+            **kwargs)
+        )
+
+    return nextsteps
+
+
+def main(screen):
+    if not ARGS.no_curses:
+        screen.nodelay(False)
+
+    r = Runner(screen)
+
+    r.load_dependancy_chain(stage1_before_anything(r))
+    r.resolve_steps()
+
+    r.load_dependancy_chain(stage2_user_questions(r))
+    r.resolve_steps()
+
+    r.load_dependancy_chain(stage3_apt(r))
+    r.resolve_steps()
+
+    # ANSIBLE_ROLE_FETCH_MODE - git checkout ansible roles, don't use galaxy
+    # BOOTSTRAP_OPTS - specify ironic as Nova's virt type
+    kwargs = {'cwd': '/opt/openstack-ansible',
+              'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
+                      'BOOTSTRAP_OPTS': 'nova_virt_type=ironic'}}
+
+    r.load_dependancy_chain(stage4_checkout_osa(r, **kwargs))
+    r.resolve_steps()
+
+    r.load_dependancy_chain(stage5_configure_osa_before_bootstrap(r, **kwargs))
     r.resolve_steps()
 
     if not ARGS.configure_only:
+        r.load_dependancy_chain(stage6_bootstrap(r, **kwargs))
+        r.resolve_steps()
+
+        r.load_dependancy_chain(stage7_user_variables(r, **kwargs))
+        r.resolve_steps()
+
+        r.load_dependancy_chain(stage8_ironic_networking(r, **kwargs))
+        r.resolve_steps()
+
         # We also need to re-write git repos in a large number of roles
         r.load_step(
             steps.BulkRegexpEditorStep(
@@ -367,22 +578,16 @@ def main(screen):
                      r.complete['git-mirror-openstack']),
                     ('https://rpc-repo.rackspace.com',
                      'http://rpc-repo.rackspace.com'),
-                    #('  get_url:', ('  until: get_url_result | success\n'
-                    #                '  retries: 5\n  delay: 30\n  get_url:')),
+                    ('https://mirror.rackspace.com',
+                     'http://mirror.rackspace.com'),
+                    ('https://bootstrap.pypa.io/get-pip.py',
+                     'http://192.168.50.1/pip/get-pip.py'),
                     (' +checksum:.*', '')
                 ],
                 **kwargs))
 
-        #####################################################################
         # Release specific steps: Mitaka
         if r.complete['osa-branch'] == 'stable/mitaka':
-            r.load_step(
-                steps.FileAppendStep(
-                    'enable-ironic-harder-mitaka',
-                    '/etc/openstack_deploy/user_variables.yml',
-                    '\n\nnova_virt_type: ironic\n',
-                    **kwargs)
-                )
             r.load_step(
                 steps.CopyFileStep(
                     'enable-ironic-environment-mitaka',
@@ -395,15 +600,31 @@ def main(screen):
 
         # The last of the things, run only once
         kwargs['max_attempts'] = 1
-        r.load_step(steps.SimpleCommandStep(
+        r.load_step(
+            steps.AnsibleTimingSimpleCommandStep(
                 'run-playbooks',
                 './scripts/run-playbooks.sh',
+                os.path.expanduser('~/.%s/run-playbook-timings.json'
+                                   % progname),
                 **kwargs))
         r.resolve_steps()
 
+        kwargs['cwd'] = None
+
+        #####################################################################
+        # Release specific steps: Mitaka
+        if r.complete['osa-branch'] == 'stable/mitaka':
+            r.load_step(
+                steps.SimpleCommandStep(
+                    'add-ironic-to-nova-venv',
+                    './helpers/add-ironic-to-nova-venv',
+                    **kwargs)
+                )
+
+            r.resolve_steps()
+
         # Debug output that might be helpful, not scripts are running from
         # ostrich directory
-        kwargs['cwd'] = None
         r.load_dependancy_chain(
             [steps.SimpleCommandStep(
                     'lxc-details',
@@ -414,10 +635,16 @@ def main(screen):
                     'pip install python-openstackclient python-ironicclient',
                     **kwargs),
              steps.SimpleCommandStep(
-                    'openstack-details',
+                    'os-cmd-bootstrap',
                     './helpers/os-cmd-bootstrap',
-                    **kwargs),
-             steps.SimpleCommandStep(
+                    **kwargs)
+             ])
+        r.resolve_steps()
+
+        kwargs['max_attempts'] = 5
+        kwargs['failing_step_delay'] = 300
+        r.load_dependancy_chain(
+            [steps.SimpleCommandStep(
                     'openstack-details',
                     './helpers/openstack-details',
                     **kwargs)

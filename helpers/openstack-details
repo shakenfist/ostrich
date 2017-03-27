@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 utility_container=`lxc-ls | grep utility`
 
@@ -7,6 +7,8 @@ echo "openrc"
 echo "============================================================="
 set -x
 lxc-attach -n $utility_container cat /root/openrc | tee ~/.ostrich/openrc
+cp -Rp /etc/openstack_deploy ~/.ostrich/
+chmod -R ugo+r ~/.ostrich
 set +x
 
 . ~/.ostrich/openrc
@@ -14,7 +16,7 @@ echo "============================================================="
 echo "curl OS_AUTH_URL"
 echo "============================================================="
 set -x
-curl $OS_AUTH_URL
+curl -m 10 $OS_AUTH_URL
 set +x
 echo
 echo
@@ -23,7 +25,8 @@ echo "============================================================="
 echo "catalog list"
 echo "============================================================="
 set -x
-/opt/openstack-ansible/scripts/os-cmd openstack catalog list
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack catalog list
+echo "Exit code: $?"
 set +x
 echo
 
@@ -31,7 +34,8 @@ echo "============================================================="
 echo "endpoint list"
 echo "============================================================="
 set -x
-/opt/openstack-ansible/scripts/os-cmd openstack endpoint list
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack endpoint list
+echo "Exit code: $?"
 set +x
 echo
 
@@ -39,7 +43,8 @@ echo "============================================================="
 echo "server list"
 echo "============================================================="
 set -x
-/opt/openstack-ansible/scripts/os-cmd openstack server list
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack server list
+echo "Exit code: $?"
 set +x
 echo
 
@@ -47,7 +52,8 @@ echo "============================================================="
 echo "image list"
 echo "============================================================="
 set -x
-/opt/openstack-ansible/scripts/os-cmd openstack image list
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack image list
+echo "Exit code: $?"
 set +x
 echo
 
@@ -55,6 +61,11 @@ echo "============================================================="
 echo "baremetal node list"
 echo "============================================================="
 set -x
-/opt/openstack-ansible/scripts/os-cmd openstack baremetal list
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack baremetal list
+echo "Exit code: $?"
 set +x
 echo
+
+echo "============================================================="
+echo "EOF"
+echo "============================================================="

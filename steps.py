@@ -11,40 +11,60 @@ import subprocess
 import sys
 import textwrap
 import time
+import yaml
 
 import emitters
 
 
+def _handle_path_in_cwd(path, cwd):
+    if not cwd:
+        return path
+    if path.startswith('/'):
+        return path
+    return os.path.join(cwd, path)
+
+
 class Step(object):
-    def __init__(self, name, depends=None, max_attempts=5):
+    def __init__(self, name, **kwargs):
         self.name = name
-        self.depends = depends
+        self.depends = kwargs.get('depends', None)
         self.attempts = 0
-        self.max_attempts = max_attempts
-
-
-class SimpleCommandStep(Step):
-    def __init__(self, name, command, depends=None, cwd=None, env=None,
-                 max_attempts=5):
-        super(SimpleCommandStep, self).__init__(name, depends=depends,
-                                                max_attempts=max_attempts)
-        self.command = command
-        self.cwd = cwd
-
-        self.env = os.environ
-        self.env.update(env)
-
-    def __str__(self):
-        return 'step %s, depends on %s' % (self.name, self.depends)
+        self.max_attempts = kwargs.get('max_attempts', 5)
+        self.failing_step_delay = kwargs.get('failing_step_delay', 300)
 
     def run(self, emit, screen):
-        emit.emit('Running %s' % self)
-        emit.emit('# %s\n' % self.command)
+        if self.attempts > 0:
+            emit.emit('... not our first attempt, sleeping for %s seconds'
+                      % self.failing_step_delay)
+            time.sleep(self.failing_step_delay)
+
         self.attempts += 1
 
         if self.attempts > self.max_attempts:
             emit.emit('... repeatedly failed step, giving up')
             sys.exit(1)
+
+        return self._run(emit, screen)
+
+
+class SimpleCommandStep(Step):
+    def __init__(self, name, command, **kwargs):
+        super(SimpleCommandStep, self).__init__(name, **kwargs)
+        self.command = command
+        self.cwd = kwargs.get('cwd')
+
+        self.env = os.environ
+        self.env.update(kwargs.get('env'))
+
+    def __str__(self):
+        return 'step %s, depends on %s' % (self.name, self.depends)
+
+    def _output_analysis(self, d):
+        pass
+
+    def _run(self, emit, screen):
+        emit.emit('Running %s' % self)
+        emit.emit('# %s\n' % self.command)
 
         obj = subprocess.Popen(self.command,
                                stdin=subprocess.PIPE,
@@ -64,9 +84,11 @@ class SimpleCommandStep(Step):
 
         obj.stdin.close()
         while obj.poll() is None:
-            readable, _, _ = select.select([obj.stderr, obj.stdout], [], [], 0)
+            readable, _, _ = select.select([obj.stderr, obj.stdout], [], [], 1)
             for f in readable:
-                emit.emit(os.read(f.fileno(), 10000))
+                d = os.read(f.fileno(), 10000)
+                self._output_analysis(d)
+                emit.emit(d)
 
             seen = []
             for child in proc.children(recursive=True):
@@ -95,14 +117,50 @@ class SimpleCommandStep(Step):
         return returncode == 0
 
 
+EXECUTION_RE = re.compile('^\[Executing "(.*)" playbook\]$')
+RUN_TIME_RE = re.compile('^Run Time = ([0-9]+) seconds$')
+
+
+class AnsibleTimingSimpleCommandStep(SimpleCommandStep):
+    def __init__(self, name, command, timings_path, **kwargs):
+        super(AnsibleTimingSimpleCommandStep, self).__init__(
+            name, command, **kwargs)
+        self.playbook = None
+
+        self.timings = []
+        self.timings_path = timings_path
+        if os.path.exists(self.timings_path):
+            with open(self.timings_path, 'r') as f:
+                self.timings = json.loads(f.read())
+        
+
+    def _output_analysis(self, d):
+        for line in d.split('\n'):
+            m = EXECUTION_RE.match(line)
+            if m:
+                self.playbook = m.group(1)
+
+            m = RUN_TIME_RE.match(line)
+            if m and self.playbook:
+                self.timings.append((self.playbook, m.group(1)))
+
+    def _run(self, emit, screen):
+        res = super(AnsibleTimingSimpleCommandStep, self)._run(emit, screen)
+
+        with open(self.timings_path, 'w') as f:
+            f.write(json.dumps(self.timings, indent=4))
+
+        return res
+
+
 class QuestionStep(Step):
-    def __init__(self, name, title, helpful, prompt, depends=None):
-        super(QuestionStep, self).__init__(name, depends)
+    def __init__(self, name, title, helpful, prompt, **kwargs):
+        super(QuestionStep, self).__init__(name, **kwargs)
         self.title = title
         self.help = helpful
         self.prompt = prompt
 
-    def run(self, emit, screen):
+    def _run(self, emit, screen):
         emit.emit('%s' % self.title)
         emit.emit('%s\n' % ('=' * len(self.title)))
         emit.emit('%s\n' % self.help)
@@ -110,16 +168,13 @@ class QuestionStep(Step):
 
 
 class RegexpEditorStep(Step):
-    def __init__(self, name, path, search, replace, cwd=None, env=None):
-        super(RegexpEditorStep, self).__init__(name)
-        self.path = path
-        if cwd and not path.startswith('/'):
-            self.path = os.path.join(cwd, path)
-
+    def __init__(self, name, path, search, replace, **kwargs):
+        super(RegexpEditorStep, self).__init__(name, **kwargs)
+        self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))
         self.search = search
         self.replace = replace
 
-    def run(self, emit, screen):
+    def _run(self, emit, screen):
         output = []
         changes = 0
 
@@ -146,17 +201,13 @@ class RegexpEditorStep(Step):
 
 
 class BulkRegexpEditorStep(Step):
-    def __init__(self, name, path, file_filter, replacements, cwd=None,
-                 env=None):
-        super(BulkRegexpEditorStep, self).__init__(name)
-        self.path = path
-        if cwd and not path.startswith('/'):
-            self.path = os.path.join(cwd, path)
-
+    def __init__(self, name, path, file_filter, replacements, **kwargs):
+        super(BulkRegexpEditorStep, self).__init__(name, **kwargs)
+        self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))
         self.file_filter = re.compile(file_filter)
         self.replacements = replacements
 
-    def run(self, emit, screen):
+    def _run(self, emit, screen):
         silent_emitter = emitters.NoopEmitter('noop', None)
         changes = 0
 
@@ -179,14 +230,16 @@ class BulkRegexpEditorStep(Step):
 
 
 class FileAppendStep(Step):
-    def __init__(self, name, path, text, depends=None, cwd=None, env=None):
-        super(FileAppendStep, self).__init__(name, depends)
-        self.path = path
-        if cwd and not self.path.startswith('/'):
-            self.path = os.path.join(cwd, path)
+    def __init__(self, name, path, text, **kwargs):
+        super(FileAppendStep, self).__init__(name, **kwargs)
+        self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))
         self.text = text
 
-    def run(self, emit, screen):
+    def _run(self, emit, screen):
+        if not os.path.exists(self.path):
+            emit.emit('%s does not exist' % self.path)
+            return False
+
         with open(self.path, 'a+') as f:
             f.write(self.text)
         return True
@@ -194,18 +247,65 @@ class FileAppendStep(Step):
 
 
 class CopyFileStep(Step):
-    def __init__(self, name, from_path, to_path, depends=None, cwd=None,
-                 env=None):
-        super(CopyFileStep, self).__init__(name, depends)
+    def __init__(self, name, from_path, to_path, **kwargs):
+        super(CopyFileStep, self).__init__(name, **kwargs)
+        self.from_path = _handle_path_in_cwd(from_path, kwargs.get('cwd'))
+        self.to_path = _handle_path_in_cwd(to_path, kwargs.get('cwd'))
 
-        self.from_path = from_path
-        if cwd and not self.from_path.startswith('/'):
-            self.from_path = os.path.join(cwd, from_path)
-
-        self.to_path = to_path
-        if cwd and not self.to_path.startswith('/'):
-            self.to_path = os.path.join(cwd, to_path)
-
-    def run(self, emit, screen):
+    def _run(self, emit, screen):
         shutil.copyfile(self.from_path, self.to_path)
+        return True
+
+
+class YamlAddElementStep(Step):
+    def __init__(self, name, path, target_element_path, data, **kwargs):
+        super(YamlAddElementStep, self).__init__(name, **kwargs)
+        self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))
+        self.target_element_path = target_element_path
+        self.data = data
+
+    def _run(self, emit, screen):
+        with open(self.path) as f:
+            y = yaml.load(f.read())
+
+        sub = y
+
+        for key in self.target_element_path:
+            sub = sub[key]
+
+        sub.append(self.data)
+
+        emit.emit('YAML after changes:')
+        emit.emit(yaml.dump(y))
+
+        with open(self.path, 'w') as f:
+            f.write(yaml.dump(y, default_flow_style=False))
+
+        return True
+
+
+class YamlUpdateDictionaryStep(Step):
+    def __init__(self, name, path, target_element_path, data, **kwargs):
+        super(YamlUpdateDictionaryStep, self).__init__(name, **kwargs)
+        self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))
+        self.target_element_path = target_element_path
+        self.data = data
+
+    def _run(self, emit, screen):
+        with open(self.path) as f:
+            y = yaml.load(f.read())
+
+        sub = y
+
+        for key in self.target_element_path:
+            sub = sub[key]
+
+        sub.update(self.data)
+
+        emit.emit('YAML after changes:')
+        emit.emit(yaml.dump(y))
+
+        with open(self.path, 'w') as f:
+            f.write(yaml.dump(y, default_flow_style=False))
+
         return True
