@@ -641,7 +641,7 @@ def main(screen):
              ])
         r.resolve_steps()
 
-        kwargs['max_attempts'] = 5
+        kwargs['max_attempts'] = 20
         kwargs['failing_step_delay'] = 300
         r.load_dependancy_chain(
             [steps.SimpleCommandStep(
