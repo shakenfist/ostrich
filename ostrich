@@ -18,6 +18,7 @@
 import argparse
 import curses
 import datetime
+import ipaddress
 import json
 import os
 import psutil
@@ -190,6 +191,17 @@ def stage2_user_questions(r):
              'here with a URL like http://cache.example.com:3128 . '
              'If you do not use a proxy, please enter "none" here.'),
             'HTTP Proxy'
+            )
+         )
+    nextsteps.append(
+        steps.QuestionStep(
+            'ironic-ip-block',
+            'IP block for Ironic nodes',
+            ('We need to know what IP range to use for the neutron network '
+             'that Ironic nodes appear on. This block is managed by neutron '
+             'so should be separate from your primary netblock. Please '
+             'specify this as a CIDR range, for example 192.168.52/24.'),
+            'Ironic IP Block'
             )
          )
     return nextsteps
@@ -481,15 +493,19 @@ def stage8_ironic_networking(r, **kwargs):
             'add-network-cidr',
             '/etc/openstack_deploy/openstack_user_config.yml',
             ['cidr_networks'],
-            {'ironic': '192.168.51.0/24'},
+            {'ironic': r.complete['ironic-ip-block']},
             **kwargs)
         )
+
+    net = ip_network(r.complete['ironic-ip-block'])
+    hosts = list(net.hosts())
+
     nextsteps.append(
         steps.YamlAddElementStep(
             'reserve-netblock-start',
             '/etc/openstack_deploy/openstack_user_config.yml',
             ['used_ips'],
-            '192.168.51.1,192.168.51.20',
+            '%s,%s' %(hosts[0], hosts[10]),
             **kwargs)
         )
     nextsteps.append(
@@ -497,7 +513,7 @@ def stage8_ironic_networking(r, **kwargs):
             'reserve-netblock-end',
             '/etc/openstack_deploy/openstack_user_config.yml',
             ['used_ips'],
-            '192.168.51.235,192.168.51.255',
+            '%s,%s' %(hosts[-10], hosts[-1]),
             **kwargs)
         )
     nextsteps.append(
@@ -515,13 +531,13 @@ def stage8_ironic_networking(r, **kwargs):
     nextsteps.append(
         steps.SimpleCommandStep(
             'add-ironic-bridge-ip',
-            'ifconfig br-ironic inet 192.168.51.4 up',
+            'ifconfig br-ironic inet %s up' % hosts[4],
             **kwargs)
         )
     nextsteps.append(
         steps.SimpleCommandStep(
             'add-ironic-interface-ip',
-            'ifconfig eth1 inet 192.168.51.3 up',
+            'ifconfig eth1 inet %s up' % hosts[3],
             **kwargs)
         )
 
@@ -647,6 +663,15 @@ def main(screen):
             [steps.SimpleCommandStep(
                     'openstack-details',
                     './helpers/openstack-details',
+                    **kwargs)
+            ])
+        r.resolve_steps()
+
+        kwargs['max_attempts'] = 1
+        r.load_dependancy_chain(
+            [steps.SimpleCommandStep(
+                    'setup-neutron-ironic',
+                    './helpers/setup-neutron-ironic',
                     **kwargs)
             ])
         r.resolve_steps()
