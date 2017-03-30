@@ -291,7 +291,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
                 ('(http|https|git)://git.openstack.org',
                  r.complete['git-mirror-openstack']),
                 ('https://rpc-repo.rackspace.com',
-                 'http://rpc-repo.rackspace.com'),
+                 'http://192.168.50.1/rpc-repo.rackspace.com'),
             ],
             **kwargs)
         )
