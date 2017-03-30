@@ -488,19 +488,20 @@ def stage8_ironic_networking(r, **kwargs):
              },
             **kwargs)
         )
-    nextsteps.append(
-        steps.YamlUpdateDictionaryStep(
-            'add-network-cidr',
-            '/etc/openstack_deploy/openstack_user_config.yml',
-            ['cidr_networks'],
-            {'ironic': r.complete['ironic-ip-block']},
-            **kwargs)
-        )
 
     net = ipaddress.ip_network(r.complete['ironic-ip-block'])
     hosts = []
     for h in net.hosts():
         hosts.append(str(h))
+
+    nextsteps.append(
+        steps.YamlUpdateDictionaryStep(
+            'add-network-cidr',
+            '/etc/openstack_deploy/openstack_user_config.yml',
+            ['cidr_networks'],
+            {'ironic': str(net)},
+            **kwargs)
+        )
 
     nextsteps.append(
         steps.YamlAddElementStep(
