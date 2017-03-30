@@ -498,7 +498,9 @@ def stage8_ironic_networking(r, **kwargs):
         )
 
     net = ipaddress.ip_network(r.complete['ironic-ip-block'])
-    hosts = list(net.hosts())
+    hosts = []
+    for h in net.hosts():
+        hosts.append(str(h))
 
     nextsteps.append(
         steps.YamlAddElementStep(
