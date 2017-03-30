@@ -497,7 +497,7 @@ def stage8_ironic_networking(r, **kwargs):
             **kwargs)
         )
 
-    net = ip_network(r.complete['ironic-ip-block'])
+    net = ipaddress.ip_network(r.complete['ironic-ip-block'])
     hosts = list(net.hosts())
 
     nextsteps.append(
