@@ -246,6 +246,23 @@ class FileAppendStep(Step):
 
 
 
+class FileCreateStep(Step):
+    def __init__(self, name, path, text, **kwargs):
+        super(FileCreateStep, self).__init__(name, **kwargs)
+        self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))
+        self.text = text
+
+    def _run(self, emit, screen):
+        if os.path.exists(self.path):
+            emit.emit('%s exists' % self.path)
+            return False
+
+        with open(self.path, 'w') as f:
+            f.write(self.text)
+        return True
+
+
+
 class CopyFileStep(Step):
     def __init__(self, name, from_path, to_path, **kwargs):
         super(CopyFileStep, self).__init__(name, **kwargs)

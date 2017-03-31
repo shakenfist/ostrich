@@ -450,6 +450,23 @@ def stage7_user_variables(r, **kwargs):
             **kwargs)
         )
 
+    nextsteps.append(
+        steps.FileCreateStep(
+            'lxc-hosts-apt-keep-configs',
+            '/etc/ansible/roles/lxc_hosts/templates/apt-keep-configs.j2',
+            """Dpkg::Options {
+   "--force-confdef";
+   "--force-confold";
+}""",
+            **kwargs)
+        )
+
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'lxc-hosts-apt-keep-configs-enable',
+            """sed -i -e '/- name: Update container resolvers/ i \\- name: Always keep modified config files\\n  template:\\n    src: apt-keep-configs.j2\\n    dest: "{{ lxc_container_cache_path }}/{{ item.chroot_path }}/etc/apt/apt.conf.d/apt-keep-configs"\\n  with_items: lxc_container_caches\\n  tags:\\n    - lxc-cache\\n    - lxc-cache-update\\n\\n'  /etc/ansible/roles/lxc_hosts/tasks/lxc_cache_preparation.yml""",
+            **kwargs)
+        )
 
     # Release specific steps: Mitaka
     if r.complete['osa-branch'] == 'stable/mitaka':
