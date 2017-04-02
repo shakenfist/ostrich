@@ -200,10 +200,21 @@ def stage2_user_questions(r):
             ('We need to know what IP range to use for the neutron network '
              'that Ironic nodes appear on. This block is managed by neutron '
              'so should be separate from your primary netblock. Please '
-             'specify this as a CIDR range, for example 192.168.52/24.'),
+             'specify this as a CIDR range, for example 192.168.52.0/24.'),
             'Ironic IP Block'
             )
          )
+    nextsteps.append(
+        steps.QuestionStep(
+            'local-cache',
+            'Local caching',
+            ('Do you locally cache rpc-repo.rackspace.com? If so, we expect '
+             'the cache to be in a directory named rpc-repo.rackspace.com '
+             'on your cache web server. Please enter the hostname for that '
+             'server here. If you do not cache, just enter "none" here.'),
+            'Local Cache'
+            )
+        )
     return nextsteps
 
 
@@ -264,6 +275,10 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
                               'https_proxy': r.complete['http-proxy']})
 
         # This entry will only last until it is clobbered by ansible
+        local_servers = 'localhost,127.0.0.1'
+        if r.complete['local-cache'] != 'none':
+            local_servers += ',%s' % r.complete['local-cache']
+            
         nextsteps.append(
             steps.FileAppendStep(
                 'proxy-environment',
@@ -274,10 +289,24 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
                   'export HTTPS_PROXY="%(proxy)s"\n'
                   'export ftp_proxy="%(proxy)s"\n'
                   'export FTP_PROXY="%(proxy)s"\n'
-                  'export no_proxy=localhost,192.168.50.1\n'
-                  'export NO_PROXY=localhost,192.168.50.1\n')
-                 % {'proxy': r.complete['http-proxy']}),
+                  'export no_proxy=%(local)s\n'
+                  'export NO_PROXY=%(local)sn')
+                 % {'proxy': r.complete['http-proxy'],
+                    'local': local_servers}),
                 **kwargs)
+            )
+
+    replacements = [
+        ('(http|https|git)://github.com',
+         r.complete['git-mirror-github']),
+        ('(http|https|git)://git.openstack.org',
+         r.complete['git-mirror-openstack']),
+        ]
+
+    if r.complete['local-cache'] != none:
+        replacements.append(
+            ('https://rpc-repo.rackspace.com',
+             'http://%s/rpc-repo.rackspace.com' % r.complete['local-cache'])
             )
 
     nextsteps.append(
@@ -285,14 +314,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
             'bulk-edit-osa',
             '/opt/openstack-ansible',
             '.*\.(ini|yml|sh)$',
-            [
-                ('(http|https|git)://github.com',
-                 r.complete['git-mirror-github']),
-                ('(http|https|git)://git.openstack.org',
-                 r.complete['git-mirror-openstack']),
-                ('https://rpc-repo.rackspace.com',
-                 'http://192.168.50.1/rpc-repo.rackspace.com'),
-            ],
+            replacements,
             **kwargs)
         )
 
@@ -421,12 +443,16 @@ def stage7_user_variables(r, **kwargs):
 
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
         # This is the more permanent way of doing this
+        local_servers = 'localhost,127.0.0.1'
+        if r.complete['local-cache'] != 'none':
+            local_servers += ',%s' % r.complete['local-cache']
+
         nextsteps.append(
             steps.FileAppendStep(
                 'proxy-environment-via-ansible',
                 '/etc/openstack_deploy/user_variables.yml',
                 (('\n\n'
-                  'no_proxy_env: "localhost,127.0.0.1,192.168.50.1,{{ '
+                  'no_proxy_env: "%(local)s,{{ '
                   'internal_lb_vip_address }},{{ external_lb_vip_address }},'
                   '{%% for host in groups[\'all_containers\'] %%}'
                   '{{ hostvars[host][\'container_address\'] }}'
@@ -438,7 +464,8 @@ def stage7_user_variables(r, **kwargs):
                   '  http_proxy: "%(proxy)s"\n'
                   '  NO_PROXY: "{{ no_proxy_env }}"\n'
                   '  no_proxy: "{{ no_proxy_env }}"')
-                 % {'proxy': r.complete['http-proxy']}),
+                 % {'proxy': r.complete['http-proxy'],
+                    'local': 'local_servers'}),
                 **kwargs)
             )
 
@@ -604,24 +631,32 @@ def main(screen):
         r.resolve_steps()
 
         # We also need to re-write git repos in a large number of roles
+        replacements = [
+            ('(http|https|git)://github.com',
+             r.complete['git-mirror-github']),
+            ('(http|https|git)://git.openstack.org',
+             r.complete['git-mirror-openstack']),
+            ('https://mirror.rackspace.com',
+             'http://mirror.rackspace.com'),
+            (' +checksum:.*', '')
+            ]
+
+        if r.complete['local-cache'] != 'none':
+            replacements.append(
+                ('https://rpc-repo.rackspace.com',
+                 'http://%s/rpc-repo.rackspace.com' % r.complete['local-cache'])
+                )
+            replacements.append(
+                ('https://bootstrap.pypa.io/get-pip.py',
+                 'http://%s/pip/get-pip.py' % r.complete['local-cache'])
+                )
+
         r.load_step(
             steps.BulkRegexpEditorStep(
                 'bulk-edit-roles',
                 '/etc/ansible',
                 '.*\.(ini|yml)$',
-                [
-                    ('(http|https|git)://github.com',
-                     r.complete['git-mirror-github']),
-                    ('(http|https|git)://git.openstack.org',
-                     r.complete['git-mirror-openstack']),
-                    ('https://rpc-repo.rackspace.com',
-                     'http://192.168.50.1/rpc-repo.rackspace.com'),
-                    ('https://mirror.rackspace.com',
-                     'http://mirror.rackspace.com'),
-                    ('https://bootstrap.pypa.io/get-pip.py',
-                     'http://192.168.50.1/pip/get-pip.py'),
-                    (' +checksum:.*', '')
-                ],
+                replacements,
                 **kwargs))
 
         # Release specific steps: Mitaka
