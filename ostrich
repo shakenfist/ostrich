@@ -303,7 +303,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
          r.complete['git-mirror-openstack']),
         ]
 
-    if r.complete['local-cache'] != none:
+    if r.complete['local-cache'] != 'none':
         replacements.append(
             ('https://rpc-repo.rackspace.com',
              'http://%s/rpc-repo.rackspace.com' % r.complete['local-cache'])
