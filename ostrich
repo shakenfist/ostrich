@@ -765,6 +765,16 @@ def main(screen):
                  ])
             r.resolve_steps()
 
+        # Must be the last step
+        kwargs['max_attempts'] = 1
+        r.load_dependancy_chain(
+            [steps.SimpleCommandStep(
+                    'COMPLETION-TOMBSTONE',
+                    '/bin/true',
+                    **kwargs)
+             ])
+        r.resolve_steps()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
