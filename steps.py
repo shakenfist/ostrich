@@ -303,7 +303,7 @@ class YamlAddElementStep(Step):
 
 class YamlDeleteElementStep(Step):
     def __init__(self, name, path, target_element_path, index, **kwargs):
-        super(YamlAddElementStep, self).__init__(name, **kwargs)
+        super(YamlDeleteElementStep, self).__init__(name, **kwargs)
         self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))
         self.target_element_path = target_element_path
         self.index = index
