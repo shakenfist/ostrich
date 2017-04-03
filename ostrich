@@ -535,6 +535,15 @@ def stage8_ironic_networking(r, **kwargs):
             **kwargs)
         )
 
+    nextsteps.append(
+        steps.YamlDeleteElementStep(
+            'add-provider-network',
+            '/etc/openstack_deploy/openstack_user_config.yml',
+            ['global_overrides', 'provider_networks'],
+            2,
+            **kwargs)
+        )
+
     net = ipaddress.ip_network(r.complete['ironic-ip-block'])
     hosts = []
     for h in net.hosts():
