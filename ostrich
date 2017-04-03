@@ -611,7 +611,7 @@ def main(screen):
     kwargs = {'cwd': '/opt/openstack-ansible',
               'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
                       'BOOTSTRAP_OPTS': 'nova_virt_type=ironic',
-                      'ANSIBLE_DEBUG': '1',
+                      # 'ANSIBLE_DEBUG': '1',
                       'ANSIBLE_KEEP_REMOTE_FILES': '1'}}
 
     r.load_dependancy_chain(stage4_checkout_osa(r, **kwargs))
