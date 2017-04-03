@@ -301,6 +301,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
          r.complete['git-mirror-github']),
         ('(http|https|git)://git.openstack.org',
          r.complete['git-mirror-openstack']),
+        ('apt-get', 'DEBIAN_FRONTEND=noninteractive apt-get')
         ]
 
     if r.complete['local-cache'] != 'none':
@@ -491,7 +492,7 @@ def stage7_user_variables(r, **kwargs):
     nextsteps.append(
         steps.SimpleCommandStep(
             'lxc-hosts-apt-keep-configs-enable',
-            """sed -i -e '/- name: Update container resolvers/ i \\- name: Always keep modified config files\\n  template:\\n    src: apt-keep-configs.j2\\n    dest: "{{ lxc_container_cache_path }}/{{ item.chroot_path }}/etc/apt/apt.conf.d/apt-keep-configs"\\n  with_items: lxc_container_caches\\n  tags:\\n    - lxc-cache\\n    - lxc-cache-update\\n\\n'  /etc/ansible/roles/lxc_hosts/tasks/lxc_cache_preparation.yml""",
+            """sed -i -e '/- name: Update container resolvers/ i \\- name: Always keep modified config files\\n  template:\\n    src: apt-keep-configs.j2\\n    dest: "{{ lxc_container_cache_path }}/{{ item.chroot_path }}/etc/apt/apt.conf.d/00apt-keep-configs"\\n  with_items: lxc_container_caches\\n  tags:\\n    - lxc-cache\\n    - lxc-cache-update\\n\\n'  /etc/ansible/roles/lxc_hosts/tasks/lxc_cache_preparation.yml""",
             **kwargs)
         )
 
@@ -638,7 +639,8 @@ def main(screen):
              r.complete['git-mirror-openstack']),
             ('https://mirror.rackspace.com',
              'http://mirror.rackspace.com'),
-            (' +checksum:.*', '')
+            (' +checksum:.*', ''),
+            ('apt-get', 'DEBIAN_FRONTEND=noninteractive apt-get')
             ]
 
         if r.complete['local-cache'] != 'none':
