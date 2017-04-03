@@ -195,15 +195,12 @@ def stage2_user_questions(r):
          )
     nextsteps.append(
         steps.QuestionStep(
-            'ironic-ip-block',
-            'IP block for Ironic nodes',
-            ('We need to know what IP range to use for the neutron network '
-             'that Ironic nodes appear on. This block is managed by neutron '
-             'so should be separate from your primary netblock. Please '
-             'specify this as a CIDR range, for example 192.168.52.0/24.'),
-            'Ironic IP Block'
+            'hypervisor',
+            'What hypervisor do you want to run?',
+            'Possible answers are "ironic" or "kvm".',
+            'Hypervisor'
             )
-         )
+        )
     nextsteps.append(
         steps.QuestionStep(
             'local-cache',
@@ -334,13 +331,15 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
     #########################################################################
     # Release specific steps: Newton
     if r.complete['osa-branch'] == 'stable/newton':
-        nextsteps.append(
-            steps.SimpleCommandStep(
-                'fixup-add-ironic-newton',
-                ('sed -i -e "/- name: heat.yml.aio/ a \        '
-                 '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
-                **kwargs)
-            )
+        if r.complete['hypervisor'] == 'ironic':
+            nextsteps.append(
+                steps.SimpleCommandStep(
+                    'fixup-add-ironic-newton',
+                    ('sed -i -e "/- name: heat.yml.aio/ a \        '
+                     '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
+                    **kwargs)
+                )
+
         nextsteps.append(
             steps.RegexpEditorStep(
                 'ansible-no-loopback-swap',
@@ -376,20 +375,21 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
                     **kwargs)
                 )
 
-        nextsteps.append(
-            steps.SimpleCommandStep(
-                'fixup-add-ironic-mitaka',
-                """sed -i -e '/swift_conf_overrides | default/ a \\    - name: ironic.yml.aio\\n      override: "{{ ironic_conf_overrides | default({}) }}"'  tests/roles/bootstrap-host/tasks/prepare_aio_config.yml""",
-                **kwargs)
-            )
+        if r.complete['hypervisor'] == 'ironic':
+            nextsteps.append(
+                steps.SimpleCommandStep(
+                    'fixup-add-ironic-mitaka',
+                    """sed -i -e '/swift_conf_overrides | default/ a \\    - name: ironic.yml.aio\\n      override: "{{ ironic_conf_overrides | default({}) }}"'  tests/roles/bootstrap-host/tasks/prepare_aio_config.yml""",
+                    **kwargs)
+                )
 
-        nextsteps.append(
-            steps.FileAppendStep(
-                'group-vars-ironic_service_user_name',
-                'playbooks/inventory/group_vars/all.yml',
-                '\n\nironic_service_user_name: ironic',
-                **kwargs)
-            )
+            nextsteps.append(
+                steps.FileAppendStep(
+                    'group-vars-ironic_service_user_name',
+                    'playbooks/inventory/group_vars/all.yml',
+                    '\n\nironic_service_user_name: ironic',
+                    **kwargs)
+                )
 
     #########################################################################
     nextsteps.append(
@@ -497,7 +497,8 @@ def stage7_user_variables(r, **kwargs):
         )
 
     # Release specific steps: Mitaka
-    if r.complete['osa-branch'] == 'stable/mitaka':
+    if (r.complete['osa-branch'] == 'stable/mitaka'
+        and r.complete['hypervisor'] == 'ironic'):
         nextsteps.append(
             steps.FileAppendStep(
                 'enable-ironic',
@@ -604,6 +605,22 @@ def main(screen):
     r.load_dependancy_chain(stage2_user_questions(r))
     r.resolve_steps()
 
+    if r.complete['hypervisor'] == 'ironic':
+        nextsteps = [
+            steps.QuestionStep(
+                'ironic-ip-block',
+                'IP block for Ironic nodes',
+                ('We need to know what IP range to use for the neutron '
+                 'network that Ironic nodes appear on. This block is managed '
+                 'by neutronso should be separate from your primary netblock. '
+                 'Please specify this as a CIDR range, for example '
+                 '192.168.52.0/24.'),
+                'Ironic IP Block'
+                )
+            ]
+        r.load_dependancy_chain(nextsteps)
+        r.resolve_steps()
+
     r.load_dependancy_chain(stage3_apt(r))
     r.resolve_steps()
 
@@ -628,8 +645,9 @@ def main(screen):
         r.load_dependancy_chain(stage7_user_variables(r, **kwargs))
         r.resolve_steps()
 
-        r.load_dependancy_chain(stage8_ironic_networking(r, **kwargs))
-        r.resolve_steps()
+        if r.complete['hypervisor'] == 'ironic':
+            r.load_dependancy_chain(stage8_ironic_networking(r, **kwargs))
+            r.resolve_steps()
 
         # We also need to re-write git repos in a large number of roles
         replacements = [
@@ -662,7 +680,8 @@ def main(screen):
                 **kwargs))
 
         # Release specific steps: Mitaka
-        if r.complete['osa-branch'] == 'stable/mitaka':
+        if (r.complete['osa-branch'] == 'stable/mitaka'
+            and r.complete['hypervisor'] == 'ironic'):
             r.load_step(
                 steps.CopyFileStep(
                     'enable-ironic-environment-mitaka',
@@ -688,7 +707,8 @@ def main(screen):
 
         #####################################################################
         # Release specific steps: Mitaka
-        if r.complete['osa-branch'] == 'stable/mitaka':
+        if (r.complete['osa-branch'] == 'stable/mitaka'
+            and r.complete['hypervisor'] == 'ironic'):
             r.load_step(
                 steps.SimpleCommandStep(
                     'add-ironic-to-nova-venv',
@@ -726,14 +746,15 @@ def main(screen):
             ])
         r.resolve_steps()
 
-        kwargs['max_attempts'] = 1
-        r.load_dependancy_chain(
-            [steps.SimpleCommandStep(
-                    'setup-neutron-ironic',
-                    './helpers/setup-neutron-ironic',
-                    **kwargs)
-            ])
-        r.resolve_steps()
+        if r.complete['hypervisor'] == 'ironic':
+            kwargs['max_attempts'] = 1
+            r.load_dependancy_chain(
+                [steps.SimpleCommandStep(
+                        'setup-neutron-ironic',
+                        './helpers/setup-neutron-ironic',
+                        **kwargs)
+                 ])
+            r.resolve_steps()
 
 
 if __name__ == '__main__':
