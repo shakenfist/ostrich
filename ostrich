@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+i#!/usr/bin/env python
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -635,11 +635,17 @@ def main(screen):
 
     # ANSIBLE_ROLE_FETCH_MODE - git checkout ansible roles, don't use galaxy
     # BOOTSTRAP_OPTS - specify ironic as Nova's virt type
-    kwargs = {'cwd': '/opt/openstack-ansible',
-              'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
-                      'BOOTSTRAP_OPTS': 'nova_virt_type=ironic',
-                      # 'ANSIBLE_DEBUG': '1',
-                      'ANSIBLE_KEEP_REMOTE_FILES': '1'}}
+    kwargs = {
+        'cwd': '/opt/openstack-ansible',
+        'env': {
+            'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
+            # 'ANSIBLE_DEBUG': '1',
+            'ANSIBLE_KEEP_REMOTE_FILES': '1'
+            }
+        }
+
+    if r.complete['hypervisor'] == 'ironic':
+        kwargs['env']['BOOTSTRAP_OPTS'] = 'nova_virt_type=ironic'
 
     r.load_dependancy_chain(stage4_checkout_osa(r, **kwargs))
     r.resolve_steps()
