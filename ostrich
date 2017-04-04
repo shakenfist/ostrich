@@ -39,9 +39,7 @@ ARGS = None
 
 
 def is_ironic(r):
-    result = r.complete['hypervisor'] == 'ironic'
-    print 'Checking if ironic is enabled: %s' % result
-    return result
+    return r.complete['hypervisor'] == 'ironic'
 
 
 class Runner(object):
@@ -66,12 +64,6 @@ class Runner(object):
         self.steps[step.name] = step
 
     def load_dependancy_chain(self, steps, depends=None):
-        s = []
-        for step in steps:
-            s.append(str(step))
-        print ('Loading %d steps into resolver: %s'
-               %(len(steps), ', '.join(s)))
-
         depend = depends
         for step in steps:
             step.depends = depend
@@ -79,12 +71,6 @@ class Runner(object):
             self.load_step(step)
 
     def resolve_steps(self):
-        s = []
-        for step in self.steps:
-            s.append(str(step))
-        print ('Resolving %d steps: %s'
-               %(len(self.steps), ', '.join(s)))
-
         if not ARGS.no_curses:
             # Setup curses windows for the steps view
             height, width = self.screen.getmaxyx()
@@ -103,7 +89,6 @@ class Runner(object):
 
         for step_name in self.complete:
             if step_name in self.steps:
-                print 'Step %s already complete!' % step_name
                 del self.steps[step_name]
 
         run = [True]
@@ -126,7 +111,6 @@ class Runner(object):
                         progress.border()
                         progress.refresh()
 
-                    print 'Running: %s' % step
                     run.append(step_name)
                     emitter.clear()
                     emitter.logger('%06d-%s' % (self.counter, step_name))
@@ -143,8 +127,13 @@ class Runner(object):
                                            indent=4, sort_keys=True))
 
             for step_name in complete:
-                print 'Step %s complete' % step_name
                 del self.steps[step_name]
+
+        if len(self.steps) > 0:
+            print('Warning! Resolving steps did not process all outstanding '
+                  'steps! This indicates a step that was expected to have '
+                  'run has not. Outstanding steps are: %s' % self.steps)
+            sys.exit(1)
 
 
 def stage1_before_anything(r):
