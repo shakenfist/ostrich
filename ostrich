@@ -130,9 +130,12 @@ class Runner(object):
                 del self.steps[step_name]
 
         if len(self.steps) > 0:
+            s = []
+            for step in self.steps:
+                s.append(str(step))
             print('Warning! Resolving steps did not process all outstanding '
                   'steps! This indicates a step that was expected to have '
-                  'run has not. Outstanding steps are: %s' % self.steps)
+                  'run has not. Outstanding steps are: %s' % '; '.join(s))
             sys.exit(1)
 
 
