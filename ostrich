@@ -578,6 +578,16 @@ def stage8_ironic_networking(r, **kwargs):
         hosts.append(str(h))
 
     nextsteps.append(
+        steps.YamlUpdateElementStep(
+            'configure-external-lb-ip',
+            '/etc/openstack_deploy/openstack_user_config.yml',
+            ['global_overrides'],
+            'external_lb_vip_address',
+            str(hosts[4]),
+            **kwargs)
+        )
+
+    nextsteps.append(
         steps.YamlUpdateDictionaryStep(
             'add-network-cidr',
             '/etc/openstack_deploy/openstack_user_config.yml',
