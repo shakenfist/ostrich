@@ -141,6 +141,7 @@ class Runner(object):
                                            indent=4, sort_keys=True))
 
             for step_name in complete:
+                print 'Step %s complete' % step_name
                 del self.steps[step_name]
 
 
