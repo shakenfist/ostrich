@@ -61,6 +61,14 @@ class Runner(object):
                 self.counter = state.get('counter', 0)
 
     def load_step(self, step):
+        if step.name in self.complete:
+            print ('You cannot load a new step with the same name as an '
+                   'already complete step! The re-used name is %s.'
+                   % step.name)
+        if step.name in self.steps:
+            print ('You cannot load a new step with the same name as an '
+                   'already pending step! The re-used name is %s.'
+                   % step.name)
         self.steps[step.name] = step
 
     def load_dependancy_chain(self, steps, depends=None):
@@ -557,7 +565,7 @@ def stage8_ironic_networking(r, **kwargs):
 
     nextsteps.append(
         steps.YamlDeleteElementStep(
-            'add-provider-network',
+            'delete-provider-network',
             '/etc/openstack_deploy/openstack_user_config.yml',
             ['global_overrides', 'provider_networks'],
             2,
