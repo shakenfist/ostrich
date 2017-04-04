@@ -32,6 +32,9 @@ class Step(object):
         self.max_attempts = kwargs.get('max_attempts', 5)
         self.failing_step_delay = kwargs.get('failing_step_delay', 300)
 
+    def __str__(self):
+        return 'step %s, depends on %s' % (self.name, self.depends)
+
     def run(self, emit, screen):
         if self.attempts > 0:
             emit.emit('... not our first attempt, sleeping for %s seconds'
@@ -56,9 +59,6 @@ class SimpleCommandStep(Step):
 
         self.env = os.environ
         self.env.update(kwargs.get('env'))
-
-    def __str__(self):
-        return 'step %s, depends on %s' % (self.name, self.depends)
 
     def _output_analysis(self, d):
         pass
