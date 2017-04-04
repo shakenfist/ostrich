@@ -44,6 +44,7 @@ class Step(object):
             emit.emit('... repeatedly failed step, giving up')
             sys.exit(1)
 
+        emit.emit('Running %s' % self)
         return self._run(emit, screen)
 
 
@@ -63,7 +64,6 @@ class SimpleCommandStep(Step):
         pass
 
     def _run(self, emit, screen):
-        emit.emit('Running %s' % self)
         emit.emit('# %s\n' % self.command)
 
         obj = subprocess.Popen(self.command,
