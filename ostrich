@@ -38,6 +38,12 @@ progname = os.path.basename(__file__)
 ARGS = None
 
 
+def is_ironic(r):
+    result = r.complete['hypervisor'] == 'ironic'
+    print 'Checking if ironic is enabled: %s' % result
+    return result
+
+
 class Runner(object):
     def __init__(self, screen):
         self.screen = screen
@@ -331,7 +337,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
     #########################################################################
     # Release specific steps: Newton
     if r.complete['osa-branch'] == 'stable/newton':
-        if r.complete['hypervisor'] == 'ironic':
+        if is_ironic(r):
             nextsteps.append(
                 steps.SimpleCommandStep(
                     'fixup-add-ironic-newton',
@@ -375,7 +381,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
                     **kwargs)
                 )
 
-        if r.complete['hypervisor'] == 'ironic':
+        if is_ironic(r):
             nextsteps.append(
                 steps.SimpleCommandStep(
                     'fixup-add-ironic-mitaka',
@@ -497,8 +503,7 @@ def stage7_user_variables(r, **kwargs):
         )
 
     # Release specific steps: Mitaka
-    if (r.complete['osa-branch'] == 'stable/mitaka'
-        and r.complete['hypervisor'] == 'ironic'):
+    if r.complete['osa-branch'] == 'stable/mitaka' and is_ironic(r):
         nextsteps.append(
             steps.FileAppendStep(
                 'enable-ironic',
@@ -637,8 +642,7 @@ def stage9_final_configuration(r, **kwargs):
             **kwargs))
 
     # Release specific steps: Mitaka
-    if (r.complete['osa-branch'] == 'stable/mitaka'
-        and r.complete['hypervisor'] == 'ironic'):
+    if r.complete['osa-branch'] == 'stable/mitaka' and is_ironic(r):
         nextsteps.append(
             steps.CopyFileStep(
                 'enable-ironic-environment-mitaka',
@@ -662,7 +666,7 @@ def main(screen):
     r.load_dependancy_chain(stage2_user_questions(r))
     r.resolve_steps()
 
-    if r.complete['hypervisor'] == 'ironic':
+    if is_ironic(r):
         nextsteps = [
             steps.QuestionStep(
                 'ironic-ip-block',
@@ -692,7 +696,7 @@ def main(screen):
             }
         }
 
-    if r.complete['hypervisor'] == 'ironic':
+    if is_ironic(r):
         kwargs['env']['BOOTSTRAP_OPTS'] = 'nova_virt_type=ironic'
 
     r.load_dependancy_chain(stage4_checkout_osa(r, **kwargs))
@@ -707,7 +711,7 @@ def main(screen):
     r.load_dependancy_chain(stage7_user_variables(r, **kwargs))
     r.resolve_steps()
 
-    if r.complete['hypervisor'] == 'ironic':
+    if is_ironic(r):
         r.load_dependancy_chain(stage8_ironic_networking(r, **kwargs))
         r.resolve_steps()
 
@@ -729,8 +733,7 @@ def main(screen):
 
     #####################################################################
     # Release specific steps: Mitaka
-    if (r.complete['osa-branch'] == 'stable/mitaka'
-        and r.complete['hypervisor'] == 'ironic'):
+    if r.complete['osa-branch'] == 'stable/mitaka' and is_ironic(r):
         r.load_step(
             steps.SimpleCommandStep(
                 'add-ironic-to-nova-venv',
@@ -768,7 +771,7 @@ def main(screen):
         ])
     r.resolve_steps()
 
-    if r.complete['hypervisor'] == 'ironic':
+    if is_ironic(r):
         kwargs['max_attempts'] = 1
         r.load_dependancy_chain(
             [steps.SimpleCommandStep(
