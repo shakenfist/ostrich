@@ -103,6 +103,7 @@ class Runner(object):
 
         for step_name in self.complete:
             if step_name in self.steps:
+                print 'Step %s already complete!' % step_name
                 del self.steps[step_name]
 
         run = [True]
@@ -125,6 +126,7 @@ class Runner(object):
                         progress.border()
                         progress.refresh()
 
+                    print 'Running: %s' % step
                     run.append(step_name)
                     emitter.clear()
                     emitter.logger('%06d-%s' % (self.counter, step_name))
