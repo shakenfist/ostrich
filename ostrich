@@ -79,6 +79,12 @@ class Runner(object):
             self.load_step(step)
 
     def resolve_steps(self):
+        s = []
+        for step in self.steps:
+            s.append(str(step))
+        print ('Resolving %d steps: %s'
+               %(len(self.steps), ', '.join(s)))
+
         if not ARGS.no_curses:
             # Setup curses windows for the steps view
             height, width = self.screen.getmaxyx()
