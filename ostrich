@@ -18,6 +18,7 @@
 import argparse
 import curses
 import datetime
+import ipaddress
 import json
 import os
 import psutil
@@ -35,6 +36,10 @@ import steps
 
 progname = os.path.basename(__file__)
 ARGS = None
+
+
+def is_ironic(r):
+    return r.complete['hypervisor'] == 'ironic'
 
 
 class Runner(object):
@@ -56,6 +61,14 @@ class Runner(object):
                 self.counter = state.get('counter', 0)
 
     def load_step(self, step):
+        if step.name in self.complete:
+            print ('You cannot load a new step with the same name as an '
+                   'already complete step! The re-used name is %s.'
+                   % step.name)
+        if step.name in self.steps:
+            print ('You cannot load a new step with the same name as an '
+                   'already pending step! The re-used name is %s.'
+                   % step.name)
         self.steps[step.name] = step
 
     def load_dependancy_chain(self, steps, depends=None):
@@ -96,7 +109,14 @@ class Runner(object):
             for step_name in self.steps:
                 step = self.steps[step_name]
 
-                if not step.depends or self.complete.get(step.depends, False):
+                runnable = False
+                if not step.depends:
+                    runnable = True
+
+                if self.complete.get(step.depends, False):
+                    runnable = True
+
+                if runnable:
                     if not ARGS.no_curses:
                         progress.clear()
                         progress.addstr(1, 3, '%s %d steps to run, running %s'
@@ -123,6 +143,16 @@ class Runner(object):
 
             for step_name in complete:
                 del self.steps[step_name]
+
+        if len(self.steps) > 0:
+            s = []
+            for step in self.steps:
+                s.append(str(step))
+
+            print('Warning! Resolving steps did not process all outstanding '
+                  'steps! This indicates a step that was expected to have '
+                  'run has not. Outstanding steps are: %s' % '; '.join(s))
+            sys.exit(1)
 
 
 def stage1_before_anything(r):
@@ -192,6 +222,25 @@ def stage2_user_questions(r):
             'HTTP Proxy'
             )
          )
+    nextsteps.append(
+        steps.QuestionStep(
+            'hypervisor',
+            'What hypervisor do you want to run?',
+            'Possible answers are "ironic" or "kvm".',
+            'Hypervisor'
+            )
+        )
+    nextsteps.append(
+        steps.QuestionStep(
+            'local-cache',
+            'Local caching',
+            ('Do you locally cache rpc-repo.rackspace.com? If so, we expect '
+             'the cache to be in a directory named rpc-repo.rackspace.com '
+             'on your cache web server. Please enter the hostname for that '
+             'server here. If you do not cache, just enter "none" here.'),
+            'Local Cache'
+            )
+        )
     return nextsteps
 
 
@@ -252,6 +301,10 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
                               'https_proxy': r.complete['http-proxy']})
 
         # This entry will only last until it is clobbered by ansible
+        local_servers = 'localhost,127.0.0.1'
+        if r.complete['local-cache'] != 'none':
+            local_servers += ',%s' % r.complete['local-cache']
+            
         nextsteps.append(
             steps.FileAppendStep(
                 'proxy-environment',
@@ -262,10 +315,25 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
                   'export HTTPS_PROXY="%(proxy)s"\n'
                   'export ftp_proxy="%(proxy)s"\n'
                   'export FTP_PROXY="%(proxy)s"\n'
-                  'export no_proxy=localhost\n'
-                  'export NO_PROXY=localhost\n')
-                 % {'proxy': r.complete['http-proxy']}),
+                  'export no_proxy=%(local)s\n'
+                  'export NO_PROXY=%(local)sn')
+                 % {'proxy': r.complete['http-proxy'],
+                    'local': local_servers}),
                 **kwargs)
+            )
+
+    replacements = [
+        ('(http|https|git)://github.com',
+         r.complete['git-mirror-github']),
+        ('(http|https|git)://git.openstack.org',
+         r.complete['git-mirror-openstack']),
+        ('apt-get', 'DEBIAN_FRONTEND=noninteractive apt-get')
+        ]
+
+    if r.complete['local-cache'] != 'none':
+        replacements.append(
+            ('https://rpc-repo.rackspace.com',
+             'http://%s/rpc-repo.rackspace.com' % r.complete['local-cache'])
             )
 
     nextsteps.append(
@@ -273,14 +341,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
             'bulk-edit-osa',
             '/opt/openstack-ansible',
             '.*\.(ini|yml|sh)$',
-            [
-                ('(http|https|git)://github.com',
-                 r.complete['git-mirror-github']),
-                ('(http|https|git)://git.openstack.org',
-                 r.complete['git-mirror-openstack']),
-                ('https://rpc-repo.rackspace.com',
-                 'http://rpc-repo.rackspace.com'),
-            ],
+            replacements,
             **kwargs)
         )
 
@@ -299,13 +360,15 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
     #########################################################################
     # Release specific steps: Newton
     if r.complete['osa-branch'] == 'stable/newton':
-        nextsteps.append(
-            steps.SimpleCommandStep(
-                'fixup-add-ironic-newton',
-                ('sed -i -e "/- name: heat.yml.aio/ a \        '
-                 '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
-                **kwargs)
-            )
+        if is_ironic(r):
+            nextsteps.append(
+                steps.SimpleCommandStep(
+                    'fixup-add-ironic-newton',
+                    ('sed -i -e "/- name: heat.yml.aio/ a \        '
+                     '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
+                    **kwargs)
+                )
+
         nextsteps.append(
             steps.RegexpEditorStep(
                 'ansible-no-loopback-swap',
@@ -341,20 +404,21 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
                     **kwargs)
                 )
 
-        nextsteps.append(
-            steps.SimpleCommandStep(
-                'fixup-add-ironic-mitaka',
-                """sed -i -e '/swift_conf_overrides | default/ a \\    - name: ironic.yml.aio\\n      override: "{{ ironic_conf_overrides | default({}) }}"'  tests/roles/bootstrap-host/tasks/prepare_aio_config.yml""",
-                **kwargs)
-            )
+        if is_ironic(r):
+            nextsteps.append(
+                steps.SimpleCommandStep(
+                    'fixup-add-ironic-mitaka',
+                    """sed -i -e '/swift_conf_overrides | default/ a \\    - name: ironic.yml.aio\\n      override: "{{ ironic_conf_overrides | default({}) }}"'  tests/roles/bootstrap-host/tasks/prepare_aio_config.yml""",
+                    **kwargs)
+                )
 
-        nextsteps.append(
-            steps.FileAppendStep(
-                'group-vars-ironic_service_user_name',
-                'playbooks/inventory/group_vars/all.yml',
-                '\n\nironic_service_user_name: ironic',
-                **kwargs)
-            )
+            nextsteps.append(
+                steps.FileAppendStep(
+                    'group-vars-ironic_service_user_name',
+                    'playbooks/inventory/group_vars/all.yml',
+                    '\n\nironic_service_user_name: ironic',
+                    **kwargs)
+                )
 
     #########################################################################
     nextsteps.append(
@@ -409,12 +473,16 @@ def stage7_user_variables(r, **kwargs):
 
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
         # This is the more permanent way of doing this
+        local_servers = 'localhost,127.0.0.1'
+        if r.complete['local-cache'] != 'none':
+            local_servers += ',%s' % r.complete['local-cache']
+
         nextsteps.append(
             steps.FileAppendStep(
                 'proxy-environment-via-ansible',
                 '/etc/openstack_deploy/user_variables.yml',
                 (('\n\n'
-                  'no_proxy_env: "localhost,127.0.0.1,{{ '
+                  'no_proxy_env: "%(local)s,{{ '
                   'internal_lb_vip_address }},{{ external_lb_vip_address }},'
                   '{%% for host in groups[\'all_containers\'] %%}'
                   '{{ hostvars[host][\'container_address\'] }}'
@@ -426,7 +494,8 @@ def stage7_user_variables(r, **kwargs):
                   '  http_proxy: "%(proxy)s"\n'
                   '  NO_PROXY: "{{ no_proxy_env }}"\n'
                   '  no_proxy: "{{ no_proxy_env }}"')
-                 % {'proxy': r.complete['http-proxy']}),
+                 % {'proxy': r.complete['http-proxy'],
+                    'local': 'local_servers'}),
                 **kwargs)
             )
 
@@ -438,9 +507,26 @@ def stage7_user_variables(r, **kwargs):
             **kwargs)
         )
 
+    nextsteps.append(
+        steps.FileCreateStep(
+            'lxc-hosts-apt-keep-configs',
+            '/etc/ansible/roles/lxc_hosts/templates/apt-keep-configs.j2',
+            """Dpkg::Options {
+   "--force-confdef";
+   "--force-confold";
+}""",
+            **kwargs)
+        )
+
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'lxc-hosts-apt-keep-configs-enable',
+            """sed -i -e '/- name: Update container resolvers/ i \\- name: Always keep modified config files\\n  template:\\n    src: apt-keep-configs.j2\\n    dest: "{{ lxc_container_cache_path }}/{{ item.chroot_path }}/etc/apt/apt.conf.d/00apt-keep-configs"\\n  with_items: lxc_container_caches\\n  tags:\\n    - lxc-cache\\n    - lxc-cache-update\\n\\n'  /etc/ansible/roles/lxc_hosts/tasks/lxc_cache_preparation.yml""",
+            **kwargs)
+        )
 
     # Release specific steps: Mitaka
-    if r.complete['osa-branch'] == 'stable/mitaka':
+    if r.complete['osa-branch'] == 'stable/mitaka' and is_ironic(r):
         nextsteps.append(
             steps.FileAppendStep(
                 'enable-ironic',
@@ -476,20 +562,36 @@ def stage8_ironic_networking(r, **kwargs):
              },
             **kwargs)
         )
+
+    nextsteps.append(
+        steps.YamlDeleteElementStep(
+            'delete-provider-network',
+            '/etc/openstack_deploy/openstack_user_config.yml',
+            ['global_overrides', 'provider_networks'],
+            2,
+            **kwargs)
+        )
+
+    net = ipaddress.ip_network(r.complete['ironic-ip-block'])
+    hosts = []
+    for h in net.hosts():
+        hosts.append(str(h))
+
     nextsteps.append(
         steps.YamlUpdateDictionaryStep(
             'add-network-cidr',
             '/etc/openstack_deploy/openstack_user_config.yml',
             ['cidr_networks'],
-            {'ironic': '192.168.51.0/24'},
+            {'ironic': str(net)},
             **kwargs)
         )
+
     nextsteps.append(
         steps.YamlAddElementStep(
             'reserve-netblock-start',
             '/etc/openstack_deploy/openstack_user_config.yml',
             ['used_ips'],
-            '192.168.51.1,192.168.51.20',
+            '%s,%s' %(hosts[0], hosts[10]),
             **kwargs)
         )
     nextsteps.append(
@@ -497,7 +599,7 @@ def stage8_ironic_networking(r, **kwargs):
             'reserve-netblock-end',
             '/etc/openstack_deploy/openstack_user_config.yml',
             ['used_ips'],
-            '192.168.51.235,192.168.51.255',
+            '%s,%s' %(hosts[-10], hosts[-1]),
             **kwargs)
         )
     nextsteps.append(
@@ -514,16 +616,63 @@ def stage8_ironic_networking(r, **kwargs):
         )
     nextsteps.append(
         steps.SimpleCommandStep(
-            'add-ironic-interface-ip',
-            'ifconfig eth1 inet 192.168.51.3 up',
+            'add-ironic-bridge-ip',
+            'ifconfig br-ironic inet %s up' % hosts[4],
             **kwargs)
         )
     nextsteps.append(
         steps.SimpleCommandStep(
-            'add-ironic-bridge-ip',
-            'ifconfig br-ironic inet 192.168.51.4 up',
+            'add-ironic-interface-ip',
+            'ifconfig eth1 inet %s up' % hosts[3],
             **kwargs)
         )
+
+    return nextsteps
+
+def stage9_final_configuration(r, **kwargs):
+    """Final tweaks to configuration before we run the playbooks."""
+
+    nextsteps = []
+
+    # We also need to re-write git repos in a large number of roles
+    replacements = [
+        ('(http|https|git)://github.com',
+         r.complete['git-mirror-github']),
+        ('(http|https|git)://git.openstack.org',
+         r.complete['git-mirror-openstack']),
+        ('https://mirror.rackspace.com',
+         'http://mirror.rackspace.com'),
+        (' +checksum:.*', ''),
+        ('apt-get', 'DEBIAN_FRONTEND=noninteractive apt-get')
+        ]
+
+    if r.complete['local-cache'] != 'none':
+        replacements.append(
+            ('https://rpc-repo.rackspace.com',
+             'http://%s/rpc-repo.rackspace.com' % r.complete['local-cache'])
+            )
+        replacements.append(
+            ('https://bootstrap.pypa.io/get-pip.py',
+             'http://%s/pip/get-pip.py' % r.complete['local-cache'])
+            )
+
+    nextsteps.append(
+        steps.BulkRegexpEditorStep(
+            'bulk-edit-roles',
+            '/etc/ansible',
+            '.*\.(ini|yml)$',
+            replacements,
+            **kwargs))
+
+    # Release specific steps: Mitaka
+    if r.complete['osa-branch'] == 'stable/mitaka' and is_ironic(r):
+        nextsteps.append(
+            steps.CopyFileStep(
+                'enable-ironic-environment-mitaka',
+                'etc/openstack_deploy/env.d/ironic.yml',
+                '/etc/openstack_deploy/env.d/ironic.yml',
+                **kwargs)
+            )
 
     return nextsteps
 
@@ -540,14 +689,38 @@ def main(screen):
     r.load_dependancy_chain(stage2_user_questions(r))
     r.resolve_steps()
 
+    if is_ironic(r):
+        nextsteps = [
+            steps.QuestionStep(
+                'ironic-ip-block',
+                'IP block for Ironic nodes',
+                ('We need to know what IP range to use for the neutron '
+                 'network that Ironic nodes appear on. This block is managed '
+                 'by neutronso should be separate from your primary netblock. '
+                 'Please specify this as a CIDR range, for example '
+                 '192.168.52.0/24.'),
+                'Ironic IP Block'
+                )
+            ]
+        r.load_dependancy_chain(nextsteps)
+        r.resolve_steps()
+
     r.load_dependancy_chain(stage3_apt(r))
     r.resolve_steps()
 
     # ANSIBLE_ROLE_FETCH_MODE - git checkout ansible roles, don't use galaxy
     # BOOTSTRAP_OPTS - specify ironic as Nova's virt type
-    kwargs = {'cwd': '/opt/openstack-ansible',
-              'env': {'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
-                      'BOOTSTRAP_OPTS': 'nova_virt_type=ironic'}}
+    kwargs = {
+        'cwd': '/opt/openstack-ansible',
+        'env': {
+            'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
+            # 'ANSIBLE_DEBUG': '1',
+            'ANSIBLE_KEEP_REMOTE_FILES': '1'
+            }
+        }
+
+    if is_ironic(r):
+        kwargs['env']['BOOTSTRAP_OPTS'] = 'nova_virt_type=ironic'
 
     r.load_dependancy_chain(stage4_checkout_osa(r, **kwargs))
     r.resolve_steps()
@@ -555,108 +728,95 @@ def main(screen):
     r.load_dependancy_chain(stage5_configure_osa_before_bootstrap(r, **kwargs))
     r.resolve_steps()
 
-    if not ARGS.configure_only:
-        r.load_dependancy_chain(stage6_bootstrap(r, **kwargs))
-        r.resolve_steps()
+    r.load_dependancy_chain(stage6_bootstrap(r, **kwargs))
+    r.resolve_steps()
 
-        r.load_dependancy_chain(stage7_user_variables(r, **kwargs))
-        r.resolve_steps()
+    r.load_dependancy_chain(stage7_user_variables(r, **kwargs))
+    r.resolve_steps()
 
+    if is_ironic(r):
         r.load_dependancy_chain(stage8_ironic_networking(r, **kwargs))
         r.resolve_steps()
 
-        # We also need to re-write git repos in a large number of roles
-        r.load_step(
-            steps.BulkRegexpEditorStep(
-                'bulk-edit-roles',
-                '/etc/ansible',
-                '.*\.(ini|yml)$',
-                [
-                    ('(http|https|git)://github.com',
-                     r.complete['git-mirror-github']),
-                    ('(http|https|git)://git.openstack.org',
-                     r.complete['git-mirror-openstack']),
-                    ('https://rpc-repo.rackspace.com',
-                     'http://rpc-repo.rackspace.com'),
-                    ('https://mirror.rackspace.com',
-                     'http://mirror.rackspace.com'),
-                    ('https://bootstrap.pypa.io/get-pip.py',
-                     'http://192.168.50.1/pip/get-pip.py'),
-                    (' +checksum:.*', '')
-                ],
-                **kwargs))
+    r.load_dependancy_chain(stage9_final_configuration(r, **kwargs))
+    r.resolve_steps()
 
-        # Release specific steps: Mitaka
-        if r.complete['osa-branch'] == 'stable/mitaka':
-            r.load_step(
-                steps.CopyFileStep(
-                    'enable-ironic-environment-mitaka',
-                    'etc/openstack_deploy/env.d/ironic.yml',
-                    '/etc/openstack_deploy/env.d/ironic.yml',
-                    **kwargs)
-                )
+    # The last of the things, run only once
+    kwargs['max_attempts'] = 1
+    r.load_step(
+        steps.AnsibleTimingSimpleCommandStep(
+            'run-playbooks',
+            './scripts/run-playbooks.sh',
+            os.path.expanduser('~/.%s/run-playbook-timings.json'
+                               % progname),
+            **kwargs))
+    r.resolve_steps()
+
+    kwargs['cwd'] = None
+
+    #####################################################################
+    # Release specific steps: Mitaka
+    if r.complete['osa-branch'] == 'stable/mitaka' and is_ironic(r):
+        r.load_step(
+            steps.SimpleCommandStep(
+                'add-ironic-to-nova-venv',
+                './helpers/add-ironic-to-nova-venv',
+                **kwargs)
+            )
 
         r.resolve_steps()
 
-        # The last of the things, run only once
+    # Debug output that might be helpful, not scripts are running from
+    # ostrich directory
+    r.load_dependancy_chain(
+        [steps.SimpleCommandStep(
+                'lxc-details',
+                './helpers/lxc-details',
+                **kwargs),
+         steps.SimpleCommandStep(
+                'pip-ruin-everything',
+                'pip install python-openstackclient python-ironicclient',
+                **kwargs),
+         steps.SimpleCommandStep(
+                'os-cmd-bootstrap',
+                './helpers/os-cmd-bootstrap',
+                **kwargs)
+         ])
+    r.resolve_steps()
+
+    kwargs['max_attempts'] = 20
+    kwargs['failing_step_delay'] = 300
+    r.load_dependancy_chain(
+        [steps.SimpleCommandStep(
+                'openstack-details',
+                './helpers/openstack-details',
+                **kwargs)
+        ])
+    r.resolve_steps()
+
+    if is_ironic(r):
         kwargs['max_attempts'] = 1
-        r.load_step(
-            steps.AnsibleTimingSimpleCommandStep(
-                'run-playbooks',
-                './scripts/run-playbooks.sh',
-                os.path.expanduser('~/.%s/run-playbook-timings.json'
-                                   % progname),
-                **kwargs))
-        r.resolve_steps()
-
-        kwargs['cwd'] = None
-
-        #####################################################################
-        # Release specific steps: Mitaka
-        if r.complete['osa-branch'] == 'stable/mitaka':
-            r.load_step(
-                steps.SimpleCommandStep(
-                    'add-ironic-to-nova-venv',
-                    './helpers/add-ironic-to-nova-venv',
-                    **kwargs)
-                )
-
-            r.resolve_steps()
-
-        # Debug output that might be helpful, not scripts are running from
-        # ostrich directory
         r.load_dependancy_chain(
             [steps.SimpleCommandStep(
-                    'lxc-details',
-                    './helpers/lxc-details',
-                    **kwargs),
-             steps.SimpleCommandStep(
-                    'pip-ruin-everything',
-                    'pip install python-openstackclient python-ironicclient',
-                    **kwargs),
-             steps.SimpleCommandStep(
-                    'os-cmd-bootstrap',
-                    './helpers/os-cmd-bootstrap',
+                    'setup-neutron-ironic',
+                    './helpers/setup-neutron-ironic',
                     **kwargs)
              ])
         r.resolve_steps()
 
-        kwargs['max_attempts'] = 5
-        kwargs['failing_step_delay'] = 300
-        r.load_dependancy_chain(
-            [steps.SimpleCommandStep(
-                    'openstack-details',
-                    './helpers/openstack-details',
-                    **kwargs)
-            ])
-        r.resolve_steps()
+    # Must be the last step
+    kwargs['max_attempts'] = 1
+    r.load_dependancy_chain(
+        [steps.SimpleCommandStep(
+                'COMPLETION-TOMBSTONE',
+                '/bin/true',
+                **kwargs)
+         ])
+    r.resolve_steps()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--configure-only', dest='configure_only',
-                        default=False, action='store_true',
-                        help='Stop after configuring OSA')
     parser.add_argument('--no-screen', dest='no_screen',
                         default=False, action='store_true',
                         help='Do not force me to use screen or tmux')

@@ -16,7 +16,7 @@ echo "============================================================="
 echo "curl OS_AUTH_URL"
 echo "============================================================="
 set -x
-curl -m 10 $OS_AUTH_URL
+/opt/openstack-ansible/scripts/os-cmd curl -m 10 $OS_AUTH_URL
 set +x
 echo
 echo

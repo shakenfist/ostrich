@@ -32,6 +32,9 @@ class Step(object):
         self.max_attempts = kwargs.get('max_attempts', 5)
         self.failing_step_delay = kwargs.get('failing_step_delay', 300)
 
+    def __str__(self):
+        return 'step %s, depends on %s' % (self.name, self.depends)
+
     def run(self, emit, screen):
         if self.attempts > 0:
             emit.emit('... not our first attempt, sleeping for %s seconds'
@@ -44,6 +47,7 @@ class Step(object):
             emit.emit('... repeatedly failed step, giving up')
             sys.exit(1)
 
+        emit.emit('Running %s' % self)
         return self._run(emit, screen)
 
 
@@ -56,14 +60,10 @@ class SimpleCommandStep(Step):
         self.env = os.environ
         self.env.update(kwargs.get('env'))
 
-    def __str__(self):
-        return 'step %s, depends on %s' % (self.name, self.depends)
-
     def _output_analysis(self, d):
         pass
 
     def _run(self, emit, screen):
-        emit.emit('Running %s' % self)
         emit.emit('# %s\n' % self.command)
 
         obj = subprocess.Popen(self.command,
@@ -246,6 +246,23 @@ class FileAppendStep(Step):
 
 
 
+class FileCreateStep(Step):
+    def __init__(self, name, path, text, **kwargs):
+        super(FileCreateStep, self).__init__(name, **kwargs)
+        self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))
+        self.text = text
+
+    def _run(self, emit, screen):
+        if os.path.exists(self.path):
+            emit.emit('%s exists' % self.path)
+            return False
+
+        with open(self.path, 'w') as f:
+            f.write(self.text)
+        return True
+
+
+
 class CopyFileStep(Step):
     def __init__(self, name, from_path, to_path, **kwargs):
         super(CopyFileStep, self).__init__(name, **kwargs)
@@ -274,6 +291,33 @@ class YamlAddElementStep(Step):
             sub = sub[key]
 
         sub.append(self.data)
+
+        emit.emit('YAML after changes:')
+        emit.emit(yaml.dump(y))
+
+        with open(self.path, 'w') as f:
+            f.write(yaml.dump(y, default_flow_style=False))
+
+        return True
+
+
+class YamlDeleteElementStep(Step):
+    def __init__(self, name, path, target_element_path, index, **kwargs):
+        super(YamlDeleteElementStep, self).__init__(name, **kwargs)
+        self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))
+        self.target_element_path = target_element_path
+        self.index = index
+
+    def _run(self, emit, screen):
+        with open(self.path) as f:
+            y = yaml.load(f.read())
+
+        sub = y
+
+        for key in self.target_element_path:
+            sub = sub[key]
+
+        del sub[self.index]
 
         emit.emit('YAML after changes:')
         emit.emit(yaml.dump(y))
