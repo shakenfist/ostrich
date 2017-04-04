@@ -66,7 +66,11 @@ class Runner(object):
         self.steps[step.name] = step
 
     def load_dependancy_chain(self, steps, depends=None):
-        print 'Loading %d steps into resolver' % len(steps)
+        s = []
+        for step in steps:
+            s.append(str(step))
+        print ('Loading %d steps into resolver: %s'
+               %(len(steps), ', '.join(s)))
 
         depend = depends
         for step in steps:
