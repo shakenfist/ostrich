@@ -307,6 +307,7 @@ class YamlUpdateElementStep(Step):
         super(YamlUpdateElementStep, self).__init__(name, **kwargs)
         self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))
         self.target_element_path = target_element_path
+        self.target_key = target_key
         self.data = data
 
     def _run(self, emit, screen):
@@ -318,7 +319,7 @@ class YamlUpdateElementStep(Step):
         for key in self.target_element_path:
             sub = sub[key]
 
-        sub[target_key] = data
+        sub[self.target_key] = self.data
 
         emit.emit('YAML after changes:')
         emit.emit(yaml.dump(y))
