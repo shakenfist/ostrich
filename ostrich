@@ -101,7 +101,14 @@ class Runner(object):
             for step_name in self.steps:
                 step = self.steps[step_name]
 
-                if not step.depends or self.complete.get(step.depends, False):
+                runnable = False
+                if not step.depends:
+                    runnable = True
+
+                if self.complete.get(step.depends, False):
+                    runnable = True
+
+                if runnable:
                     if not ARGS.no_curses:
                         progress.clear()
                         progress.addstr(1, 3, '%s %d steps to run, running %s'
@@ -133,6 +140,7 @@ class Runner(object):
             s = []
             for step in self.steps:
                 s.append(str(step))
+
             print('Warning! Resolving steps did not process all outstanding '
                   'steps! This indicates a step that was expected to have '
                   'run has not. Outstanding steps are: %s' % '; '.join(s))
