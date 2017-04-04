@@ -304,7 +304,7 @@ class YamlAddElementStep(Step):
 class YamlUpdateElementStep(Step):
     def __init__(self, name, path, target_element_path, target_key, data, 
                  **kwargs):
-        super(YamlAddElementStep, self).__init__(name, **kwargs)
+        super(YamlUpdateElementStep, self).__init__(name, **kwargs)
         self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))
         self.target_element_path = target_element_path
         self.data = data
