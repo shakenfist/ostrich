@@ -578,6 +578,16 @@ def stage8_ironic_networking(r, **kwargs):
         hosts.append(str(h))
 
     nextsteps.append(
+        steps.YamlUpdateElementStep(
+            'configure-external-lb-ip',
+            '/etc/openstack_deploy/openstack_user_config.yml',
+            ['global_overrides'],
+            'external_lb_vip_address',
+            str(hosts[4]),
+            **kwargs)
+        )
+
+    nextsteps.append(
         steps.YamlUpdateDictionaryStep(
             'add-network-cidr',
             '/etc/openstack_deploy/openstack_user_config.yml',
@@ -784,8 +794,16 @@ def main(screen):
          ])
     r.resolve_steps()
 
-    kwargs['max_attempts'] = 20
-    kwargs['failing_step_delay'] = 300
+    kwargs['max_attempts'] = 3
+    kwargs['failing_step_delay'] = 150
+
+    # Remove our HTTP proxy settings because the interfere with talking to
+    # OpenStack
+    kwargs['env']['http_proxy'] = ''
+    kwargs['env']['https_proxy'] = ''
+    kwargs['env']['HTTP_PROXY'] = ''
+    kwargs['env']['HTTPS_PROXY'] = ''
+
     r.load_dependancy_chain(
         [steps.SimpleCommandStep(
                 'openstack-details',

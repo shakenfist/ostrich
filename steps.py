@@ -301,6 +301,35 @@ class YamlAddElementStep(Step):
         return True
 
 
+class YamlUpdateElementStep(Step):
+    def __init__(self, name, path, target_element_path, target_key, data, 
+                 **kwargs):
+        super(YamlUpdateElementStep, self).__init__(name, **kwargs)
+        self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))
+        self.target_element_path = target_element_path
+        self.target_key = target_key
+        self.data = data
+
+    def _run(self, emit, screen):
+        with open(self.path) as f:
+            y = yaml.load(f.read())
+
+        sub = y
+
+        for key in self.target_element_path:
+            sub = sub[key]
+
+        sub[self.target_key] = self.data
+
+        emit.emit('YAML after changes:')
+        emit.emit(yaml.dump(y))
+
+        with open(self.path, 'w') as f:
+            f.write(yaml.dump(y, default_flow_style=False))
+
+        return True
+
+
 class YamlDeleteElementStep(Step):
     def __init__(self, name, path, target_element_path, index, **kwargs):
         super(YamlDeleteElementStep, self).__init__(name, **kwargs)
