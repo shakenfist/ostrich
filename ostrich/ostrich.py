@@ -21,13 +21,7 @@ import datetime
 import ipaddress
 import json
 import os
-import psutil
-import re
-import select
-import subprocess
 import sys
-import textwrap
-import time
 import urlparse
 
 import emitters
@@ -62,13 +56,13 @@ class Runner(object):
 
     def load_step(self, step):
         if step.name in self.complete:
-            print ('You cannot load a new step with the same name as an '
-                   'already complete step! The re-used name is %s.'
-                   % step.name)
+            print('You cannot load a new step with the same name as an '
+                  'already complete step! The re-used name is %s.'
+                  % step.name)
         if step.name in self.steps:
-            print ('You cannot load a new step with the same name as an '
-                   'already pending step! The re-used name is %s.'
-                   % step.name)
+            print('You cannot load a new step with the same name as an '
+                  'already pending step! The re-used name is %s.'
+                  % step.name)
         self.steps[step.name] = step
 
     def load_dependancy_chain(self, steps, depends=None):
@@ -221,7 +215,7 @@ def stage2_user_questions(r):
              'If you do not use a proxy, please enter "none" here.'),
             'HTTP Proxy'
             )
-         )
+        )
     nextsteps.append(
         steps.QuestionStep(
             'hypervisor',
@@ -304,7 +298,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
         local_servers = 'localhost,127.0.0.1'
         if r.complete['local-cache'] != 'none':
             local_servers += ',%s' % r.complete['local-cache']
-            
+
         nextsteps.append(
             steps.FileAppendStep(
                 'proxy-environment',
@@ -559,7 +553,7 @@ def stage8_ironic_networking(r, **kwargs):
                   'net_name': 'ironic',
                   'ip_from_q': 'ironic'
                   }
-             },
+            },
             **kwargs)
         )
 
@@ -601,7 +595,7 @@ def stage8_ironic_networking(r, **kwargs):
             'reserve-netblock-start',
             '/etc/openstack_deploy/openstack_user_config.yml',
             ['used_ips'],
-            '%s,%s' %(hosts[0], hosts[10]),
+            '%s,%s' % (hosts[0], hosts[10]),
             **kwargs)
         )
     nextsteps.append(
@@ -609,7 +603,7 @@ def stage8_ironic_networking(r, **kwargs):
             'reserve-netblock-end',
             '/etc/openstack_deploy/openstack_user_config.yml',
             ['used_ips'],
-            '%s,%s' %(hosts[-10], hosts[-1]),
+            '%s,%s' % (hosts[-10], hosts[-1]),
             **kwargs)
         )
     nextsteps.append(
@@ -638,6 +632,7 @@ def stage8_ironic_networking(r, **kwargs):
         )
 
     return nextsteps
+
 
 def stage9_final_configuration(r, **kwargs):
     """Final tweaks to configuration before we run the playbooks."""
@@ -687,7 +682,7 @@ def stage9_final_configuration(r, **kwargs):
     return nextsteps
 
 
-def main(screen):
+def deploy(screen):
     if not ARGS.no_curses:
         screen.nodelay(False)
 
@@ -779,18 +774,16 @@ def main(screen):
     # Debug output that might be helpful, not scripts are running from
     # ostrich directory
     r.load_dependancy_chain(
-        [steps.SimpleCommandStep(
-                'lxc-details',
-                './helpers/lxc-details',
-                **kwargs),
-         steps.SimpleCommandStep(
-                'pip-ruin-everything',
-                'pip install python-openstackclient python-ironicclient',
-                **kwargs),
-         steps.SimpleCommandStep(
-                'os-cmd-bootstrap',
-                './helpers/os-cmd-bootstrap',
-                **kwargs)
+        [steps.SimpleCommandStep('lxc-details',
+                                 './helpers/lxc-details',
+                                 **kwargs),
+         steps.SimpleCommandStep('pip-ruin-everything',
+                                 ('pip install python-openstackclient '
+                                  'python-ironicclient'),
+                                 **kwargs),
+         steps.SimpleCommandStep('os-cmd-bootstrap',
+                                 './helpers/os-cmd-bootstrap',
+                                 **kwargs)
          ])
     r.resolve_steps()
 
@@ -814,26 +807,20 @@ def main(screen):
 
     if is_ironic(r):
         kwargs['max_attempts'] = 1
-        r.load_dependancy_chain(
-            [steps.SimpleCommandStep(
-                    'setup-neutron-ironic',
-                    './helpers/setup-neutron-ironic',
-                    **kwargs)
-             ])
+        r.load_step(steps.SimpleCommandStep('setup-neutron-ironic',
+                                            './helpers/setup-neutron-ironic',
+                                            **kwargs))
         r.resolve_steps()
 
     # Must be the last step
     kwargs['max_attempts'] = 1
-    r.load_dependancy_chain(
-        [steps.SimpleCommandStep(
-                'COMPLETION-TOMBSTONE',
-                '/bin/true',
-                **kwargs)
-         ])
+    r.load_step(steps.SimpleCommandStep('COMPLETION-TOMBSTONE',
+                                        '/bin/true',
+                                        **kwargs))
     r.resolve_steps()
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-screen', dest='no_screen',
                         default=False, action='store_true',
@@ -849,6 +836,6 @@ if __name__ == '__main__':
             sys.exit('Only run ostrich in a screen or tmux session please')
 
     if ARGS.no_curses:
-        main(None)
+        deploy(None)
     else:
-        curses.wrapper(main)
+        curses.wrapper(deploy)

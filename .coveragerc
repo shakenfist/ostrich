@@ -1,0 +1,7 @@
+[run]
+branch = True
+source = ostrich
+omit = ostrich/tests/*
+
+[report]
+ignore_errors = True
