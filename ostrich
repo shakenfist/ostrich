@@ -42,6 +42,15 @@ def is_ironic(r):
     return r.complete['hypervisor'] == 'ironic'
 
 
+def expand_ironic_netblock(r):
+    net = ipaddress.ip_network(r.complete['ironic-ip-block'])
+    hosts = []
+    for h in net.hosts():
+        hosts.append(str(h))
+
+    return net, hosts
+
+
 class Runner(object):
     def __init__(self, screen):
         self.screen = screen
@@ -572,10 +581,7 @@ def stage8_ironic_networking(r, **kwargs):
             **kwargs)
         )
 
-    net = ipaddress.ip_network(r.complete['ironic-ip-block'])
-    hosts = []
-    for h in net.hosts():
-        hosts.append(str(h))
+    net, hosts = expand_ironic_netblock(r)
 
     nextsteps.append(
         steps.YamlUpdateElementStep(
@@ -813,13 +819,15 @@ def main(screen):
     r.resolve_steps()
 
     if is_ironic(r):
+        net, hosts = expand_ironic_netblock(r)
         kwargs['max_attempts'] = 1
-        r.load_dependancy_chain(
-            [steps.SimpleCommandStep(
-                    'setup-neutron-ironic',
-                    './helpers/setup-neutron-ironic',
-                    **kwargs)
-             ])
+        r.load_step(steps.SimpleCommandStep(
+                'setup-neutron-ironic',
+                ('./helpers/setup-neutron-ironic %s %s %s %s'
+                 % (r.complete['ironic-ip-block'],
+                    hosts[0], hosts[11], hosts[-11])
+                 ),
+                **kwargs))
         r.resolve_steps()
 
     # Must be the last step
