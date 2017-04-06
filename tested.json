@@ -1,3 +1,5 @@
 {
-    "stable/mitaka": "1583f24043fd4e60635af9eee1de440c4a3977f8"
+    "openstack-ansible": {
+        "stable/mitaka": "2652135578cc4a686bb93427674aa0c87f144a85"
+    }
 }
