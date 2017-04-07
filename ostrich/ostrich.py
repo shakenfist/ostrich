@@ -28,7 +28,7 @@ import emitters
 import steps
 
 
-progname = os.path.basename(__file__)
+progname = os.path.basename(__file__).replace('.py', '')
 ARGS = None
 
 
