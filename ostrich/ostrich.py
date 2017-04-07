@@ -73,6 +73,8 @@ class Runner(object):
             self.load_step(step)
 
     def resolve_steps(self):
+        global ARGS
+
         if not ARGS.no_curses:
             # Setup curses windows for the steps view
             height, width = self.screen.getmaxyx()
@@ -683,6 +685,8 @@ def stage9_final_configuration(r, **kwargs):
 
 
 def deploy(screen):
+    global ARGS
+
     if not ARGS.no_curses:
         screen.nodelay(False)
 
@@ -821,6 +825,8 @@ def deploy(screen):
 
 
 def main():
+    global ARGS
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-screen', dest='no_screen',
                         default=False, action='store_true',
