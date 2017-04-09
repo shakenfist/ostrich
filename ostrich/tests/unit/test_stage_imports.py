@@ -18,4 +18,4 @@ from ostrich import stage_loader
 class StageImportsTestCase(base.BaseTestCase):
     def test_stage0_loads(self):
         sl = stage_loader.discover_stages()
-        self.assertEqual('00_before_anything.py', sl[0])
+        self.assertEqual('stage_00_before_anything.py', sl[0])

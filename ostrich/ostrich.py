@@ -25,132 +25,17 @@ import os
 import sys
 import urlparse
 
-import emitters
-import stage_loader
-import steps
+from ostrich import emitters
+from ostrich import runner
+from ostrich import stage_loader
+from ostrich import steps
 
 
-progname = os.path.basename(__file__).replace('.py', '')
 ARGS = None
 
 
 def is_ironic(r):
     return r.complete['hypervisor'] == 'ironic'
-
-
-class Runner(object):
-    def __init__(self, screen):
-        self.screen = screen
-
-        self.steps = {}
-
-        self.state_path = os.path.expanduser('~/.%s/state.json' % progname)
-        if not os.path.exists(os.path.expanduser('~/.%s' % progname)):
-            os.mkdir(os.path.expanduser('~/.%s' % progname))
-
-        self.complete = {}
-        self.counter = 0
-        if os.path.exists(self.state_path):
-            with open(self.state_path, 'r') as f:
-                state = json.loads(f.read())
-                self.complete = state.get('complete', {})
-                self.counter = state.get('counter', 0)
-
-    def load_step(self, step):
-        if step.name in self.complete:
-            print('You cannot load a new step with the same name as an '
-                  'already complete step! The re-used name is %s.'
-                  % step.name)
-        if step.name in self.steps:
-            print('You cannot load a new step with the same name as an '
-                  'already pending step! The re-used name is %s.'
-                  % step.name)
-        self.steps[step.name] = step
-
-    def load_dependancy_chain(self, steps, depends=None):
-        depend = depends
-        for step in steps:
-            step.depends = depend
-            depend = step.name
-            self.load_step(step)
-
-    def resolve_steps(self):
-        global ARGS
-
-        if not ARGS.no_curses:
-            # Setup curses windows for the steps view
-            height, width = self.screen.getmaxyx()
-            progress = curses.newwin(3, width, 0, 0)
-            progress.border()
-            progress.refresh()
-
-            output = curses.newwin(height - 4, width, 3, 0)
-            output.scrollok(True)
-            output.border()
-            output.refresh()
-            emitter = emitters.Emitter(progname, output)
-        else:
-            output = None
-            emitter = emitters.SimpleEmitter(progname, output)
-
-        for step_name in self.complete:
-            if step_name in self.steps:
-                del self.steps[step_name]
-
-        run = [True]
-        complete = []
-
-        while len(run) > 0:
-            run = []
-            complete = []
-
-            for step_name in self.steps:
-                step = self.steps[step_name]
-
-                runnable = False
-                if not step.depends:
-                    runnable = True
-
-                if self.complete.get(step.depends, False):
-                    runnable = True
-
-                if runnable:
-                    if not ARGS.no_curses:
-                        progress.clear()
-                        progress.addstr(1, 3, '%s %d steps to run, running %s'
-                                        % (datetime.datetime.now(),
-                                           len(self.steps),
-                                           step_name))
-                        progress.border()
-                        progress.refresh()
-
-                    run.append(step_name)
-                    emitter.clear()
-                    emitter.logger('%06d-%s' % (self.counter, step_name))
-                    outcome = step.run(emitter, self.screen)
-                    self.counter += 1
-
-                    if outcome:
-                        self.complete[step_name] = outcome
-                        complete.append(step_name)
-
-                    with open(self.state_path, 'w') as f:
-                        f.write(json.dumps({'complete': self.complete,
-                                            'counter': self.counter},
-                                           indent=4, sort_keys=True))
-
-            for step_name in complete:
-                del self.steps[step_name]
-
-        if len(self.steps) > 0:
-            s = []
-            for step in self.steps:
-                s.append(str(step))
-
-            print('Warning! Resolving steps did not process all outstanding '
-                  'steps! This indicates a step that was expected to have '
-                  'run has not. Outstanding steps are: %s' % '; '.join(s))
-            sys.exit(1)
 
 
 def stage2_user_questions(r):
@@ -677,7 +562,7 @@ def deploy(screen):
     if not ARGS.no_curses:
         screen.nodelay(False)
 
-    r = Runner(screen)
+    r = runner.Runner(screen)
 
     # Generic stage lookup tool. This allows deployers to add stages without
     # re-coding the underlying engine, and for new stages to be added without

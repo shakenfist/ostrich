@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Add a simple stage loading system
 * Our progname changed
 * Mark ARGS as a global
 * Parameterize neutron network setup
