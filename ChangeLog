@@ -1,0 +1,169 @@
+CHANGES
+=======
+
+* Our progname changed
+* Mark ARGS as a global
+* Parameterize neutron network setup
+* Start rolling out a more formal structure
+* Fix proxy errors in verification steps
+* Don't code before coffee
+* Fix super() error
+* Use the address accessible to ironic nodes as the LB address
+* Still hunting for how long to wait before keystone works post install
+* Don't reuse step names
+* Make step selection logic more obvious
+* Better formatting of fatal message
+* Not resolving all steps is fatal
+* Still chasing why ironic things aren't running
+* Really not sure why the ironic steps aren't running
+* List steps resolver has considered
+* Yet more debugging of why some ironic steps aren't running
+* More debugging for why ironic steps aren't all running
+* Use pretty names for all steps
+* Centralize the logic for detecting an ironic install
+* Run the curl command from the utility container
+* More consistently log steps executing
+* Remove stray character
+* Move final configuration steps into a method
+* Only set ironic environment variable if ironic is enabled
+* Drop configure-only, its no longer useful
+* Fix super() error
+* Add completion tombstone to indicate success
+* Ironic conflicts with the flat network
+* Make ironic optional
+* UCF uses a different mechanism to disable prompts
+* Turn off ansible debug to make output more readable
+* none is a string
+* Don't hard code my personal cache
+* Always keep configuration files which have been modified
+* Found another rpc-repo to cache
+* Found another place we needed the network as a string
+* Make sure addresses are forced to strings
+* Properly qualify ip_network
+* Add ipaddress as a requirement
+* Performance tweaks
+* Record what SHA we tested for stable/mitaka most recently
+* Make the ironic netblock configurable
+* A helper to setup neutron networks for ironic
+* Theory: order of configuring the ironic interfaces matters
+* Wait longer for keystone to come good post install
+* Fix missing comma
+* Fix incorrect variable name
+* Make get-pip cachable
+* Parse timing information from ansible verbose logs
+* Make mirror.rackspace.com cachable
+* Further refactor to not be bonkers
+* Edit /etc/openstack_deploy instead of templates
+* Start a refactor to make main() easier to read
+* Enable ironic was happening in the wrong place
+* Copy openstack_deply to the logs directory
+* Write user variable changes to the template the play uses
+* Require appended files to exist
+* Update user_variables post copy to /etc
+* Fix missing newline char
+* Be consistent with nextsteps naming
+* Correctly escape %age signs
+* Fix order of proxy entries
+* No actually, we really do
+* We don't need kwargs here
+* Enable debug and verbose modes
+* Use the OSA way of enabling http proxies
+* The interface and the bridge both need IPs
+* We need to pass the return code through and fix typo
+* Cleanup init methods for steps
+* Tweak the IP the OSA VM gets
+* Add timeouts to openstack commands
+* Add a timeout to the curl command
+* Fix accidentally duplicated step name
+* Configure host side of bridge
+* Add an ironic bridge
+* Reserve IPs in the ironic netblock
+* Fix super() error
+* Update the cidr networks dictionary as well
+* Be more efficient with the select loop
+* Change YAML flow style
+* Add ironic provider network
+* Archive upper constraints, and fix nova venv using it
+* Add logging to simple emitter
+* Make curses optional as well
+* Remove incorrect comment
+* Add a no-screen option for CI tests
+* Fix typo
+* Use os-cmd to run openstack commands in the utility container
+* Fix typos
+* Dump debug details at the end of the run
+* Add ironic environment configuration
+* Fix typo
+* Add a service user name to group vars
+* Write gzipped logs
+* Fix missing newlines
+* Write a proxy environment file as well
+* Ironic harder
+* Make rpc-repo.rackspace.com cachable
+* Enable ironic virt mode
+* Fixups for mitaka
+* Fix typo
+* Add a configure only dryrun mode
+* Add mitaka specific steps
+* Fix indents
+* get_url retries are causing me issues, let's turn them off for a bit
+* Use success not suceeded
+* Give up on checksums
+* Only install packages once
+* Don't do heaps of container retries
+* Re-write git URLs in OSA in a better way
+* Retry URL fetches
+* Fixing REAMME.rst indention
+* Adding README.rst
+* Added copyright header
+* Made ostrich executable
+* Specify nova_virt_type in the new undocumented way
+* Force ordering of final steps
+* A better name for the run-playbooks step
+* Force ansible bootstrap before git repo re-write
+* Be more filtery
+* Call regexp match right
+* We need a progname in the emitter
+* Get lazy with imports
+* Fix line length
+* At least my typos are consistent
+* Fix pep8 errors
+* pep8 fixes, emitters.py
+* Bulk edit files in a nicer way
+* Refactor steps and emitters
+* Fix max_attempts some more
+* Fix process end for process missing data
+* More repo container retries
+* Add a requirements file
+* Log sub pids
+* Fix lxc install command line
+* Still unmirrored git repos
+* Fix max_attempts in the direction of working
+* LXC needs to be installed before we can patch it
+* Make sure plain HTTP LXC requests cache too
+* Updating screen test for tmux + user-friendliness
+* Fix execution path for run-playbooks
+* Moving from setup-everything to run-playbooks
+* Rename script to handle new progname detection
+* Add a hack to make LXC images cachable
+* Remove hardcoded ostrich references
+* Moving from setup-everything to run-playbooks
+* Typo fix
+* Make http proxy optional
+* Diff like output for file edits
+* Limit attempts for setup-everything, as it needs special retries
+* Make paths logable, fix wrong method name
+* Write output from the bottom of the window to be consistent
+* Get filenames right for git mirror rewrites
+* Use git mirror for other ansible roles
+* Wait for apt-daily to finish, and fetch ansible from a mirror
+* Fix dependancy errors
+* Automate AIO bootstrapping
+* Git clone fixups
+* Curses, and git checkout of OSA
+* Better screen check
+* Move depends setup to base class
+* Force everyone to use screen
+* Ask questions about git mirrors
+* Simple apt steps
+* Initial commit

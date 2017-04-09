@@ -18,6 +18,7 @@
 import argparse
 import curses
 import datetime
+import imp
 import ipaddress
 import json
 import os
@@ -25,6 +26,7 @@ import sys
 import urlparse
 
 import emitters
+import stage_loader
 import steps
 
 
@@ -149,21 +151,6 @@ class Runner(object):
                   'steps! This indicates a step that was expected to have '
                   'run has not. Outstanding steps are: %s' % '; '.join(s))
             sys.exit(1)
-
-
-def stage1_before_anything(r):
-    """Things to do before attempting anything."""
-
-    nextsteps = []
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'apt-daily',
-            ('while [ `ps -ef | grep apt.systemd.daily | '
-             'grep -vc "grep"` -gt 0 ]; do '
-             'echo "Waiting for daily apt run to end"; sleep 10; done')
-            )
-        )
-    return nextsteps
 
 
 def stage2_user_questions(r):
@@ -692,8 +679,16 @@ def deploy(screen):
 
     r = Runner(screen)
 
-    r.load_dependancy_chain(stage1_before_anything(r))
-    r.resolve_steps()
+    # Generic stage lookup tool. This allows deployers to add stages without
+    # re-coding the underlying engine, and for new stages to be added without
+    # a lot of plumbing.
+    for stage_pyname in stage_loader.discover_stages():
+        path = os.path.join(os.path.dirname(__file__), 'stages', stage_pyname)
+        with open(path) as f:
+            module = imp.load_module(stage_pyname.replace('.py', ''),
+                                     f, path, '')
+            r.load_dependancy_chain(module.get_steps(r))
+            r.resolve_steps()
 
     r.load_dependancy_chain(stage2_user_questions(r))
     r.resolve_steps()
