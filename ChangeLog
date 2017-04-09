@@ -1,6 +1,8 @@
 CHANGES
 =======
 
+* Fix module loading
+* Fix imports
 * Fix dynamic stage loading
 * Start testing stage 00
 * Add a simple stage loading system

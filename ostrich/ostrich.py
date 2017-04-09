@@ -17,7 +17,7 @@
 
 import argparse
 import curses
-import imp
+import importlib
 import ipaddress
 import os
 import sys
@@ -564,15 +564,10 @@ def deploy(screen):
     # re-coding the underlying engine, and for new stages to be added without
     # a lot of plumbing.
     for stage_pyname in stage_loader.discover_stages():
-        path = os.path.join(os.path.dirname(__file__), 'stages', stage_pyname)
         name = stage_pyname.replace('.py', '')
-
-        f, pathname, desc = imp.find_module(name, path)
-        module = imp.load_module(name, f, pathname, desc)
-        r.load_dependancy_chain(module.get_steps(r))
+        module = importlib.import_module('ostrich.stages.%s' % name)
+        module.get_steps(r)
         r.resolve_steps(use_curses=(not ARGS.no_curses))
-
-    sys.exit(0)
 
     r.load_dependancy_chain(stage2_user_questions(r))
     r.resolve_steps(use_curses=(not ARGS.no_curses))

@@ -11,7 +11,11 @@
 # limitations under the License.
 
 
+import importlib
+import os
+
 from oslotest import base
+from ostrich import runner
 from ostrich import stage_loader
 
 
@@ -19,3 +23,12 @@ class StageImportsTestCase(base.BaseTestCase):
     def test_stage0_loads(self):
         sl = stage_loader.discover_stages()
         self.assertEqual('stage_00_before_anything.py', sl[0])
+
+    def test_stage_importability(self):
+        r = runner.Runner(None)
+
+        for stage_pyname in stage_loader.discover_stages():
+            name = stage_pyname.replace('.py', '')
+            module = importlib.import_module(
+                'ostrich.stages.%s' % name)
+            module.get_steps(r)
