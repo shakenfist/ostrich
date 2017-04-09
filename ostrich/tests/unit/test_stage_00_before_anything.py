@@ -10,12 +10,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import mock
+import psutil
+import time
 
 from oslotest import base
 
+from ostrich import emitters
 from ostrich import runner
 from ostrich.stages import stage_00_before_anything
 from ostrich import steps
+
+
+class FakeProcess(object):
+    def __init__(self, cmdline):
+        self._cmdline = cmdline
+
+    def cmdline(self):
+        return self._cmdline
+
+
+PROCESS_ITER_RESULTS = None
+
+
+def fake_process_iter():
+    results = PROCESS_ITER_RESULTS.pop(0)
+    for item in results:
+        yield FakeProcess(item)
 
 
 class Stage00TestCase(base.BaseTestCase):
@@ -23,9 +44,31 @@ class Stage00TestCase(base.BaseTestCase):
         r = runner.Runner(None)
         work = stage_00_before_anything.get_steps(r)
         self.assertTrue(len(work) == 1)
-        self.assertTrue(type(work[0]) is steps.SimpleCommandStep)
+        self.assertTrue(type(work[0]) is
+                        stage_00_before_anything.AptDailyStep)
 
-    def test_stage_waits_for_apt(self):
-        # TODO(mikal): rewrite this stage to be more pythonic and therefore
-        # testable. Our heritage as a shell script is a bit too clear here.
-        pass
+    @mock.patch('psutil.process_iter', fake_process_iter)
+    @mock.patch.object(time, 'sleep', return_value=None)
+    def test_apt_daily_step(self, mock_time):
+        global PROCESS_ITER_RESULTS
+        PROCESS_ITER_RESULTS = [
+            [
+                ['/usr/bin/foo', 'apt.systemd.daily'],
+                ['/bin/ls'],
+                ['/bin/true']
+                ],
+            [
+                ['/bin/ls'],
+                ['/usr/bin/foo', 'apt.systemd.daily'],
+                ['/bin/true']
+                ],
+            [
+                ['/bin/ls'],
+                ['/bin/true']
+                ]
+            ]
+
+        emit = emitters.NoopEmitter('tests', None)
+        s = stage_00_before_anything.AptDailyStep('apt-daily')
+        self.assertTrue(s._run(emit, None))
+        self.assertEqual(2, mock_time.call_count)

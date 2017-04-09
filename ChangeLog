@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Load the dynamic dependancy chain
 * Fix module loading
 * Fix imports
 * Fix dynamic stage loading
