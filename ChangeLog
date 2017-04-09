@@ -1,6 +1,8 @@
 CHANGES
 =======
 
+* Fix dynamic stage loading
+* Start testing stage 00
 * Add a simple stage loading system
 * Our progname changed
 * Mark ARGS as a global

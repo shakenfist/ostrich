@@ -17,18 +17,15 @@
 
 import argparse
 import curses
-import datetime
 import imp
 import ipaddress
-import json
 import os
 import sys
 import urlparse
 
-from ostrich import emitters
-from ostrich import runner
-from ostrich import stage_loader
-from ostrich import steps
+import runner
+import stage_loader
+import steps
 
 
 ARGS = None
@@ -305,8 +302,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
              'plain/upper-constraints.txt?id='
              '$(awk \'/requirements_git_install_branch:/ {print $2}\' '
              '/opt/openstack-ansible/playbooks/defaults/repo_packages/'
-             'openstack_services.yml) -o ~/.%s/upper-contraints.txt'
-             % progname),
+             'openstack_services.yml) -o ~/.ostrich/upper-contraints.txt'),
             **kwargs)
         )
 
@@ -574,10 +570,12 @@ def deploy(screen):
         f, pathname, desc = imp.find_module(name, path)
         module = imp.load_module(name, f, pathname, desc)
         r.load_dependancy_chain(module.get_steps(r))
-        r.resolve_steps()
+        r.resolve_steps(use_curses=(not ARGS.no_curses))
+
+    sys.exit(0)
 
     r.load_dependancy_chain(stage2_user_questions(r))
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     if is_ironic(r):
         nextsteps = [
@@ -593,10 +591,10 @@ def deploy(screen):
                 )
             ]
         r.load_dependancy_chain(nextsteps)
-        r.resolve_steps()
+        r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     r.load_dependancy_chain(stage3_apt(r))
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # ANSIBLE_ROLE_FETCH_MODE - git checkout ansible roles, don't use galaxy
     # BOOTSTRAP_OPTS - specify ironic as Nova's virt type
@@ -613,23 +611,23 @@ def deploy(screen):
         kwargs['env']['BOOTSTRAP_OPTS'] = 'nova_virt_type=ironic'
 
     r.load_dependancy_chain(stage4_checkout_osa(r, **kwargs))
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     r.load_dependancy_chain(stage5_configure_osa_before_bootstrap(r, **kwargs))
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     r.load_dependancy_chain(stage6_bootstrap(r, **kwargs))
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     r.load_dependancy_chain(stage7_user_variables(r, **kwargs))
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     if is_ironic(r):
         r.load_dependancy_chain(stage8_ironic_networking(r, **kwargs))
-        r.resolve_steps()
+        r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     r.load_dependancy_chain(stage9_final_configuration(r, **kwargs))
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # The last of the things, run only once
     kwargs['max_attempts'] = 1
@@ -637,10 +635,9 @@ def deploy(screen):
         steps.AnsibleTimingSimpleCommandStep(
             'run-playbooks',
             './scripts/run-playbooks.sh',
-            os.path.expanduser('~/.%s/run-playbook-timings.json'
-                               % progname),
+            os.path.expanduser('~/.ostrich/run-playbook-timings.json'),
             **kwargs))
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     kwargs['cwd'] = None
 
@@ -654,7 +651,7 @@ def deploy(screen):
                 **kwargs)
             )
 
-        r.resolve_steps()
+        r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # Debug output that might be helpful, not scripts are running from
     # ostrich directory
@@ -670,7 +667,7 @@ def deploy(screen):
                                  './helpers/os-cmd-bootstrap',
                                  **kwargs)
          ])
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     kwargs['max_attempts'] = 3
     kwargs['failing_step_delay'] = 150
@@ -688,21 +685,21 @@ def deploy(screen):
                 './helpers/openstack-details',
                 **kwargs)
         ])
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     if is_ironic(r):
         kwargs['max_attempts'] = 1
         r.load_step(steps.SimpleCommandStep('setup-neutron-ironic',
                                             './helpers/setup-neutron-ironic',
                                             **kwargs))
-        r.resolve_steps()
+        r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # Must be the last step
     kwargs['max_attempts'] = 1
     r.load_step(steps.SimpleCommandStep('COMPLETION-TOMBSTONE',
                                         '/bin/true',
                                         **kwargs))
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
 
 def main():

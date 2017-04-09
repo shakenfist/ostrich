@@ -11,7 +11,13 @@
 # limitations under the License.
 
 
+import curses
+import datetime
+import json
 import os
+import sys
+
+import emitters
 
 
 class Runner(object):
@@ -50,10 +56,8 @@ class Runner(object):
             depend = step.name
             self.load_step(step)
 
-    def resolve_steps(self):
-        global ARGS
-
-        if not ARGS.no_curses:
+    def resolve_steps(self, use_curses=True):
+        if use_curses:
             # Setup curses windows for the steps view
             height, width = self.screen.getmaxyx()
             progress = curses.newwin(3, width, 0, 0)
@@ -91,7 +95,7 @@ class Runner(object):
                     runnable = True
 
                 if runnable:
-                    if not ARGS.no_curses:
+                    if use_curses:
                         progress.clear()
                         progress.addstr(1, 3, '%s %d steps to run, running %s'
                                         % (datetime.datetime.now(),
