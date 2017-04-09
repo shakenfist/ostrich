@@ -569,11 +569,12 @@ def deploy(screen):
     # a lot of plumbing.
     for stage_pyname in stage_loader.discover_stages():
         path = os.path.join(os.path.dirname(__file__), 'stages', stage_pyname)
-        with open(path) as f:
-            module = imp.load_module(stage_pyname.replace('.py', ''),
-                                     f, path, '')
-            r.load_dependancy_chain(module.get_steps(r))
-            r.resolve_steps()
+        name = stage_pyname.replace('.py', '')
+
+        f, pathname, desc = imp.find_module(name, path)
+        module = imp.load_module(name, f, pathname, desc)
+        r.load_dependancy_chain(module.get_steps(r))
+        r.resolve_steps()
 
     r.load_dependancy_chain(stage2_user_questions(r))
     r.resolve_steps()
