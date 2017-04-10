@@ -14,7 +14,7 @@ from ostrich import steps
 from ostrich import utils
 
 
-def get_steps(r, **kwargs):
+def get_steps(r):
     """Things we need the user to tell us about ironic."""
 
     nextsteps = []
@@ -28,7 +28,8 @@ def get_steps(r, **kwargs):
                  'by neutronso should be separate from your primary netblock. '
                  'Please specify this as a CIDR range, for example '
                  '192.168.52.0/24.'),
-                'Ironic IP Block'
+                'Ironic IP Block',
+                **steps.KWARGS
                 )
             )
     return nextsteps

@@ -14,7 +14,7 @@ from ostrich import steps
 from ostrich import utils
 
 
-def get_steps(r, **kwargs):
+def get_steps(r):
     """Clone and checkout OSA."""
 
     nextsteps = []
@@ -24,7 +24,8 @@ def get_steps(r, **kwargs):
             ('git clone %s/openstack/openstack-ansible '
              '/opt/openstack-ansible'
              % r.complete['git-mirror-openstack'])
-            )
+            ),
+            **steps.KWARGS
         )
     nextsteps.append(
         steps.KwargsStep(
@@ -37,7 +38,7 @@ def get_steps(r, **kwargs):
                     'ANSIBLE_KEEP_REMOTE_FILES': '1'
                 }
             },
-            **kwargs
+            **steps.KWARGS
             )
         )
 
@@ -50,7 +51,7 @@ def get_steps(r, **kwargs):
                         'BOOTSTRAP_OPTS': 'nova_virt_type=ironic'
                     }
                 },
-                **kwargs
+                **steps.KWARGS
                 )
             )
 
@@ -58,7 +59,7 @@ def get_steps(r, **kwargs):
         steps.SimpleCommandStep(
             'git-checkout-osa',
             'git checkout %s' % r.complete['osa-branch'],
-            **kwargs
+            **steps.KWARGS
             )
         )
     return nextsteps

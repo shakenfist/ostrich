@@ -442,7 +442,7 @@ def deploy(screen):
     for stage_pyname in stage_loader.discover_stages():
         name = stage_pyname.replace('.py', '')
         module = importlib.import_module('ostrich.stages.%s' % name)
-        r.load_dependancy_chain(module.get_steps(r, **steps.KWARGS))
+        r.load_dependancy_chain(module.get_steps(r))
         r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     r.load_dependancy_chain(stage5_configure_osa_before_bootstrap(

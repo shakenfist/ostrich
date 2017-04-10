@@ -13,28 +13,34 @@
 from ostrich import steps
 
 
-def get_steps(r, **kwargs):
+def get_steps(r):
     """Prepare apt."""
 
     nextsteps = []
     nextsteps.append(
-        steps.SimpleCommandStep('apt-update', 'apt-get update', **kwargs)
+        steps.SimpleCommandStep(
+            'apt-update',
+            'apt-get update',
+            **steps.KWARGS)
         )
     nextsteps.append(
-        steps.SimpleCommandStep('apt-upgrade', 'apt-get upgrade -y', **kwargs)
+        steps.SimpleCommandStep(
+            'apt-upgrade',
+            'apt-get upgrade -y',
+            **steps.KWARGS)
         )
     nextsteps.append(
         steps.SimpleCommandStep(
             'apt-dist-upgrade',
             'apt-get dist-upgrade -y',
-            **kwargs
+            **steps.KWARGS
             )
         )
     nextsteps.append(
         steps.SimpleCommandStep(
             'apt-useful',
             'apt-get install -y screen ack-grep git expect lxc',
-            **kwargs
+            **steps.KWARGS
             )
         )
     return nextsteps

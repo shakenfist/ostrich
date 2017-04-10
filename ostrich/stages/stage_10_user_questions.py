@@ -13,7 +13,7 @@
 from ostrich import steps
 
 
-def get_steps(r, **kwargs):
+def get_steps(r):
     """Things we need the user to tell us."""
 
     nextsteps = []
@@ -29,7 +29,7 @@ def get_steps(r, **kwargs):
              '<protocol>://<server>, for example '
              'git://gitmirror.example.com'),
             'Mirror URL',
-            **kwargs
+            **steps.KWARGS
             )
         )
     nextsteps.append(
@@ -44,7 +44,7 @@ def get_steps(r, **kwargs):
              'answer in the form of <protocol>://<server>, for '
              'example git://gitmirror.example.com'),
             'Mirror URL',
-            **kwargs
+            **steps.KWARGS
             )
         )
     nextsteps.append(
@@ -53,7 +53,7 @@ def get_steps(r, **kwargs):
             'What OSA branch (or commit SHA) would you like to use?',
             'Use stable/newton unless you know what you are doing.',
             'OSA branch',
-            **kwargs
+            **steps.KWARGS
             )
         )
     nextsteps.append(
@@ -66,7 +66,7 @@ def get_steps(r, **kwargs):
              'here with a URL like http://cache.example.com:3128 . '
              'If you do not use a proxy, please enter "none" here.'),
             'HTTP Proxy',
-            **kwargs
+            **steps.KWARGS
             )
         )
     nextsteps.append(
@@ -75,7 +75,7 @@ def get_steps(r, **kwargs):
             'What hypervisor do you want to run?',
             'Possible answers are "ironic" or "kvm".',
             'Hypervisor',
-            **kwargs
+            **steps.KWARGS
             )
         )
     nextsteps.append(
@@ -87,7 +87,7 @@ def get_steps(r, **kwargs):
              'on your cache web server. Please enter the hostname for that '
              'server here. If you do not cache, just enter "none" here.'),
             'Local Cache',
-            **kwargs
+            **steps.KWARGS
             )
         )
     return nextsteps
