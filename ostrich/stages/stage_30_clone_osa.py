@@ -15,7 +15,7 @@ from ostrich import utils
 
 
 def get_steps(r):
-    """Clone and checkout OSA."""
+    """Clone OSA."""
 
     nextsteps = []
     nextsteps.append(
@@ -57,11 +57,4 @@ def get_steps(r):
                 )
             )
 
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'git-checkout-osa',
-            'git checkout %s' % r.complete['osa-branch'],
-            **r.kwargs
-            )
-        )
     return nextsteps
