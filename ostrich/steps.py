@@ -71,6 +71,7 @@ class KwargsStep(Step):
     def run(self, emit, screen):
         self.kwargs.update(self.kwarg_updates)
         emit.emit(json.dumps(self.kwargs, indent=4, sort_keys=True))
+        return True
 
 
 class SimpleCommandStep(Step):
