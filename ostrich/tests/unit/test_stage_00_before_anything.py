@@ -11,7 +11,6 @@
 # limitations under the License.
 
 import mock
-import psutil
 import time
 
 from oslotest import base

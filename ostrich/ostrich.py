@@ -26,134 +26,10 @@ import urlparse
 import runner
 import stage_loader
 import steps
+import utils
 
 
 ARGS = None
-
-
-def is_ironic(r):
-    return r.complete['hypervisor'] == 'ironic'
-
-
-def stage2_user_questions(r):
-    """Things we need the user to tell us."""
-
-    nextsteps = []
-    nextsteps.append(
-        steps.QuestionStep(
-            'git-mirror-github',
-            'Are you running a local github.com mirror?',
-            ('Mirroring github.com speeds up setup on slow and '
-             'unreliable networks, but means that you have to '
-             'maintain a mirror somewhere on your corporate network. '
-             'If you are unsure, just enter "git://github.com" here. '
-             'Otherwise, we need an answer in the form of '
-             '<protocol>://<server>, for example '
-             'git://gitmirror.example.com'),
-            'Mirror URL'
-            )
-        )
-    nextsteps.append(
-        steps.QuestionStep(
-            'git-mirror-openstack',
-            'Are you running a local git.openstack.org mirror?',
-            ('Mirroring git.openstack.org speeds up setup on slow '
-             'and unreliable networks, but means that you have to '
-             'maintain a mirror somewhere on your corporate network. '
-             'If you are unsure, just enter '
-             '"git://git.openstack.org" here. Otherwise, we need an '
-             'answer in the form of <protocol>://<server>, for '
-             'example git://gitmirror.example.com'),
-            'Mirror URL'
-            )
-        )
-    nextsteps.append(
-        steps.QuestionStep(
-            'osa-branch',
-            'What OSA branch (or commit SHA) would you like to use?',
-            'Use stable/newton unless you know what you are doing.',
-            'OSA branch'
-            )
-        )
-    nextsteps.append(
-        steps.QuestionStep(
-            'http-proxy',
-            'Are you running a local http proxy?',
-            ('OSA will download large objects such as LXC base '
-             'images. If you have a slow network, or are on a '
-             'corporate network which requires a proxy, configure it '
-             'here with a URL like http://cache.example.com:3128 . '
-             'If you do not use a proxy, please enter "none" here.'),
-            'HTTP Proxy'
-            )
-        )
-    nextsteps.append(
-        steps.QuestionStep(
-            'hypervisor',
-            'What hypervisor do you want to run?',
-            'Possible answers are "ironic" or "kvm".',
-            'Hypervisor'
-            )
-        )
-    nextsteps.append(
-        steps.QuestionStep(
-            'local-cache',
-            'Local caching',
-            ('Do you locally cache rpc-repo.rackspace.com? If so, we expect '
-             'the cache to be in a directory named rpc-repo.rackspace.com '
-             'on your cache web server. Please enter the hostname for that '
-             'server here. If you do not cache, just enter "none" here.'),
-            'Local Cache'
-            )
-        )
-    return nextsteps
-
-
-def stage3_apt(r):
-    """Prepare apt."""
-
-    nextsteps = []
-    nextsteps.append(
-        steps.SimpleCommandStep('apt-update', 'apt-get update')
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep('apt-upgrade', 'apt-get upgrade -y')
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'apt-dist-upgrade',
-            'apt-get dist-upgrade -y'
-            )
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'apt-useful',
-            'apt-get install -y screen ack-grep git expect lxc'
-            )
-        )
-    return nextsteps
-
-
-def stage4_checkout_osa(r, **kwargs):
-    """Clone and checkout OSA."""
-
-    nextsteps = []
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'git-clone-osa',
-            ('git clone %s/openstack/openstack-ansible '
-             '/opt/openstack-ansible'
-             % r.complete['git-mirror-openstack'])
-            )
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'git-checkout-osa',
-            'git checkout %s' % r.complete['osa-branch'],
-            **kwargs
-            )
-        )
-    return nextsteps
 
 
 def stage5_configure_osa_before_bootstrap(r, **kwargs):
@@ -225,7 +101,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
     #########################################################################
     # Release specific steps: Newton
     if r.complete['osa-branch'] == 'stable/newton':
-        if is_ironic(r):
+        if utils.is_ironic(r):
             nextsteps.append(
                 steps.SimpleCommandStep(
                     'fixup-add-ironic-newton',
@@ -269,7 +145,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
                     **kwargs)
                 )
 
-        if is_ironic(r):
+        if utils.is_ironic(r):
             nextsteps.append(
                 steps.SimpleCommandStep(
                     'fixup-add-ironic-mitaka',
@@ -390,7 +266,7 @@ def stage7_user_variables(r, **kwargs):
         )
 
     # Release specific steps: Mitaka
-    if r.complete['osa-branch'] == 'stable/mitaka' and is_ironic(r):
+    if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
         nextsteps.append(
             steps.FileAppendStep(
                 'enable-ironic',
@@ -540,7 +416,7 @@ def stage9_final_configuration(r, **kwargs):
             **kwargs))
 
     # Release specific steps: Mitaka
-    if r.complete['osa-branch'] == 'stable/mitaka' and is_ironic(r):
+    if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
         nextsteps.append(
             steps.CopyFileStep(
                 'enable-ironic-environment-mitaka',
@@ -559,6 +435,7 @@ def deploy(screen):
         screen.nodelay(False)
 
     r = runner.Runner(screen)
+    kwargs = {}
 
     # Generic stage lookup tool. This allows deployers to add stages without
     # re-coding the underlying engine, and for new stages to be added without
@@ -566,47 +443,8 @@ def deploy(screen):
     for stage_pyname in stage_loader.discover_stages():
         name = stage_pyname.replace('.py', '')
         module = importlib.import_module('ostrich.stages.%s' % name)
-        r.load_dependancy_chain(module.get_steps(r))
+        r.load_dependancy_chain(module.get_steps(r, **kwargs))
         r.resolve_steps(use_curses=(not ARGS.no_curses))
-
-    r.load_dependancy_chain(stage2_user_questions(r))
-    r.resolve_steps(use_curses=(not ARGS.no_curses))
-
-    if is_ironic(r):
-        nextsteps = [
-            steps.QuestionStep(
-                'ironic-ip-block',
-                'IP block for Ironic nodes',
-                ('We need to know what IP range to use for the neutron '
-                 'network that Ironic nodes appear on. This block is managed '
-                 'by neutronso should be separate from your primary netblock. '
-                 'Please specify this as a CIDR range, for example '
-                 '192.168.52.0/24.'),
-                'Ironic IP Block'
-                )
-            ]
-        r.load_dependancy_chain(nextsteps)
-        r.resolve_steps(use_curses=(not ARGS.no_curses))
-
-    r.load_dependancy_chain(stage3_apt(r))
-    r.resolve_steps(use_curses=(not ARGS.no_curses))
-
-    # ANSIBLE_ROLE_FETCH_MODE - git checkout ansible roles, don't use galaxy
-    # BOOTSTRAP_OPTS - specify ironic as Nova's virt type
-    kwargs = {
-        'cwd': '/opt/openstack-ansible',
-        'env': {
-            'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
-            # 'ANSIBLE_DEBUG': '1',
-            'ANSIBLE_KEEP_REMOTE_FILES': '1'
-            }
-        }
-
-    if is_ironic(r):
-        kwargs['env']['BOOTSTRAP_OPTS'] = 'nova_virt_type=ironic'
-
-    r.load_dependancy_chain(stage4_checkout_osa(r, **kwargs))
-    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     r.load_dependancy_chain(stage5_configure_osa_before_bootstrap(r, **kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
@@ -617,7 +455,7 @@ def deploy(screen):
     r.load_dependancy_chain(stage7_user_variables(r, **kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    if is_ironic(r):
+    if utils.is_ironic(r):
         r.load_dependancy_chain(stage8_ironic_networking(r, **kwargs))
         r.resolve_steps(use_curses=(not ARGS.no_curses))
 
@@ -638,7 +476,7 @@ def deploy(screen):
 
     #####################################################################
     # Release specific steps: Mitaka
-    if r.complete['osa-branch'] == 'stable/mitaka' and is_ironic(r):
+    if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
         r.load_step(
             steps.SimpleCommandStep(
                 'add-ironic-to-nova-venv',
@@ -682,7 +520,7 @@ def deploy(screen):
         ])
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    if is_ironic(r):
+    if utils.is_ironic(r):
         kwargs['max_attempts'] = 1
         r.load_step(steps.SimpleCommandStep('setup-neutron-ironic',
                                             './helpers/setup-neutron-ironic',

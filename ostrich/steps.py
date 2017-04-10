@@ -62,6 +62,17 @@ class Step(object):
         return self._run(emit, screen)
 
 
+class KwargsStep(Step):
+    def __init__(self, name, kwarg_updates=None, **kwargs):
+        self.name
+        self.kwarg_updates = kwarg_updates
+        self.kwargs = kwargs
+
+    def run(self, emit, screen):
+        self.kwargs.update(self.kwarg_updates)
+        emit.emit(json.dumps(self.kwargs, indent=4, sort_keys=True))
+
+
 class SimpleCommandStep(Step):
     def __init__(self, name, command, **kwargs):
         super(SimpleCommandStep, self).__init__(name, **kwargs)

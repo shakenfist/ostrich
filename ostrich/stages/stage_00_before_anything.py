@@ -36,9 +36,9 @@ class AptDailyStep(steps.Step):
         return True
 
 
-def get_steps(r):
+def get_steps(r, **kwargs):
     """Things to do before attempting anything."""
 
     nextsteps = []
-    nextsteps.append(AptDailyStep('apt-daily'))
+    nextsteps.append(AptDailyStep('apt-daily', **kwargs))
     return nextsteps
