@@ -25,6 +25,7 @@ import time
 import yaml
 
 import emitters
+import utils
 
 
 KWARGS = {}
@@ -72,7 +73,7 @@ class KwargsStep(Step):
 
     def run(self, emit, screen):
         global KWARGS
-        KWARGS.update(self.kwarg_updates)
+        utils.recursive_dictionary_update(KWARGS, self.kwarg_updates)
         emit.emit(json.dumps(KWARGS, indent=4, sort_keys=True))
         return True
 

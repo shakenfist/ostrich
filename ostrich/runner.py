@@ -26,12 +26,10 @@ class Runner(object):
 
         self.steps = {}
 
-        self.state_path = self._get_state_path()
-
         self.complete = {}
         self.counter = 0
-        if os.path.exists(self.state_path):
-            with open(self.state_path, 'r') as f:
+        if os.path.exists(self._get_state_path()):
+            with open(self._get_state_path(), 'r') as f:
                 state = json.loads(f.read())
                 self.complete = state.get('complete', {})
                 self.counter = state.get('counter', 0)
@@ -118,10 +116,11 @@ class Runner(object):
                         self.complete[step_name] = outcome
                         complete.append(step_name)
 
-                    with open(self.state_path, 'w') as f:
-                        f.write(json.dumps({'complete': self.complete,
-                                            'counter': self.counter},
-                                           indent=4, sort_keys=True))
+                    if self._get_state_path():
+                        with open(self._get_state_path(), 'w') as f:
+                            f.write(json.dumps({'complete': self.complete,
+                                                'counter': self.counter},
+                                               indent=4, sort_keys=True))
 
             for step_name in complete:
                 del self.steps[step_name]

@@ -16,5 +16,10 @@ from ostrich import runner
 
 
 class QuestionsAnsweredRunner(runner.Runner):
+    def __init__(self, screen):
+        self._sp = os.path.join(os.path.dirname(__file__), 'state.json')
+        super(QuestionsAnsweredRunner, self).__init__(screen)
+        self._sp = None
+
     def _get_state_path(self):
-        return os.path.join(os.path.dirname(__file__), 'state.json')
+        return self._sp

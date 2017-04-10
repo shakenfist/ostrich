@@ -6,9 +6,8 @@
         "http-proxy": "http://192.168.50.1:3128", 
         "hypervisor": "ironic", 
         "ironic-ip-block": "192.168.53.0/24", 
-        "kwargs-osa": true, 
         "local-cache": "192.168.50.1", 
         "osa-branch": "stable/mitaka"
     }, 
-    "counter": 1
+    "counter": 0
 }

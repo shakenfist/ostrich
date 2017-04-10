@@ -16,3 +16,12 @@
 
 def is_ironic(r):
     return r.complete['hypervisor'] == 'ironic'
+
+
+def recursive_dictionary_update(d, updates):
+    for key in updates:
+        if key in d and type(d[key]) is dict:
+            recursive_dictionary_update(d[key], updates[key])
+        else:
+            d[key] = updates[key]
+    return d
