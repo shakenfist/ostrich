@@ -29,7 +29,7 @@ def get_steps(r):
              '<protocol>://<server>, for example '
              'git://gitmirror.example.com'),
             'Mirror URL',
-            **steps.KWARGS
+            **r.kwargs
             )
         )
     nextsteps.append(
@@ -44,7 +44,7 @@ def get_steps(r):
              'answer in the form of <protocol>://<server>, for '
              'example git://gitmirror.example.com'),
             'Mirror URL',
-            **steps.KWARGS
+            **r.kwargs
             )
         )
     nextsteps.append(
@@ -53,7 +53,7 @@ def get_steps(r):
             'What OSA branch (or commit SHA) would you like to use?',
             'Use stable/newton unless you know what you are doing.',
             'OSA branch',
-            **steps.KWARGS
+            **r.kwargs
             )
         )
     nextsteps.append(
@@ -66,7 +66,7 @@ def get_steps(r):
              'here with a URL like http://cache.example.com:3128 . '
              'If you do not use a proxy, please enter "none" here.'),
             'HTTP Proxy',
-            **steps.KWARGS
+            **r.kwargs
             )
         )
     nextsteps.append(
@@ -75,7 +75,7 @@ def get_steps(r):
             'What hypervisor do you want to run?',
             'Possible answers are "ironic" or "kvm".',
             'Hypervisor',
-            **steps.KWARGS
+            **r.kwargs
             )
         )
     nextsteps.append(
@@ -87,7 +87,7 @@ def get_steps(r):
              'on your cache web server. Please enter the hostname for that '
              'server here. If you do not cache, just enter "none" here.'),
             'Local Cache',
-            **steps.KWARGS
+            **r.kwargs
             )
         )
     return nextsteps

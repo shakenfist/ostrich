@@ -28,9 +28,6 @@ import emitters
 import utils
 
 
-KWARGS = {}
-
-
 def _handle_path_in_cwd(path, cwd):
     if not cwd:
         return path
@@ -42,6 +39,8 @@ def _handle_path_in_cwd(path, cwd):
 class Step(object):
     def __init__(self, name, **kwargs):
         self.name = name
+        self.kwargs = kwargs
+
         self.depends = kwargs.get('depends', None)
         self.attempts = 0
         self.max_attempts = kwargs.get('max_attempts', 5)
@@ -63,18 +62,20 @@ class Step(object):
             sys.exit(1)
 
         emit.emit('Running %s' % self)
+        emit.emit('   with kwargs: %s' % self.kwargs)
+        emit.emit('\n')
         return self._run(emit, screen)
 
 
 class KwargsStep(Step):
-    def __init__(self, name, kwarg_updates, **kwargs):
+    def __init__(self, name, r, kwarg_updates, **kwargs):
         super(KwargsStep, self).__init__(name, **kwargs)
+        self.r = r
         self.kwarg_updates = kwarg_updates
 
     def run(self, emit, screen):
-        global KWARGS
-        utils.recursive_dictionary_update(KWARGS, self.kwarg_updates)
-        emit.emit(json.dumps(KWARGS, indent=4, sort_keys=True))
+        utils.recursive_dictionary_update(self.r.kwargs, self.kwarg_updates)
+        emit.emit(json.dumps(self.r.kwargs, indent=4, sort_keys=True))
         return True
 
 

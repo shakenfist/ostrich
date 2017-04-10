@@ -446,33 +446,33 @@ def deploy(screen):
         r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     r.load_dependancy_chain(stage5_configure_osa_before_bootstrap(
-            r, **steps.KWARGS))
+            r, **r.kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.load_dependancy_chain(stage6_bootstrap(r, **steps.KWARGS))
+    r.load_dependancy_chain(stage6_bootstrap(r, **r.kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.load_dependancy_chain(stage7_user_variables(r, **steps.KWARGS))
+    r.load_dependancy_chain(stage7_user_variables(r, **r.kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     if utils.is_ironic(r):
-        r.load_dependancy_chain(stage8_ironic_networking(r, **steps.KWARGS))
+        r.load_dependancy_chain(stage8_ironic_networking(r, **r.kwargs))
         r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.load_dependancy_chain(stage9_final_configuration(r, **steps.KWARGS))
+    r.load_dependancy_chain(stage9_final_configuration(r, **r.kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # The last of the things, run only once
-    steps.KWARGS['max_attempts'] = 1
+    r.kwargs['max_attempts'] = 1
     r.load_step(
         steps.AnsibleTimingSimpleCommandStep(
             'run-playbooks',
             './scripts/run-playbooks.sh',
             os.path.expanduser('~/.ostrich/run-playbook-timings.json'),
-            **steps.KWARGS))
+            **r.kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    steps.KWARGS['cwd'] = None
+    r.kwargs['cwd'] = None
 
     #####################################################################
     # Release specific steps: Mitaka
@@ -481,7 +481,7 @@ def deploy(screen):
             steps.SimpleCommandStep(
                 'add-ironic-to-nova-venv',
                 './helpers/add-ironic-to-nova-venv',
-                **steps.KWARGS)
+                **r.kwargs)
             )
 
         r.resolve_steps(use_curses=(not ARGS.no_curses))
@@ -491,47 +491,47 @@ def deploy(screen):
     r.load_dependancy_chain(
         [steps.SimpleCommandStep('lxc-details',
                                  './helpers/lxc-details',
-                                 **steps.KWARGS),
+                                 **r.kwargs),
          steps.SimpleCommandStep('pip-ruin-everything',
                                  ('pip install python-openstackclient '
                                   'python-ironicclient'),
-                                 **steps.KWARGS),
+                                 **r.kwargs),
          steps.SimpleCommandStep('os-cmd-bootstrap',
                                  './helpers/os-cmd-bootstrap',
-                                 **steps.KWARGS)
+                                 **r.kwargs)
          ])
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    steps.KWARGS['max_attempts'] = 3
-    steps.KWARGS['failing_step_delay'] = 150
+    r.kwargs['max_attempts'] = 3
+    r.kwargs['failing_step_delay'] = 150
 
     # Remove our HTTP proxy settings because the interfere with talking to
     # OpenStack
-    steps.KWARGS['env']['http_proxy'] = ''
-    steps.KWARGS['env']['https_proxy'] = ''
-    steps.KWARGS['env']['HTTP_PROXY'] = ''
-    steps.KWARGS['env']['HTTPS_PROXY'] = ''
+    r.kwargs['env']['http_proxy'] = ''
+    r.kwargs['env']['https_proxy'] = ''
+    r.kwargs['env']['HTTP_PROXY'] = ''
+    r.kwargs['env']['HTTPS_PROXY'] = ''
 
     r.load_dependancy_chain(
         [steps.SimpleCommandStep(
                 'openstack-details',
                 './helpers/openstack-details',
-                **steps.KWARGS)
+                **r.kwargs)
         ])
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     if utils.is_ironic(r):
-        steps.KWARGS['max_attempts'] = 1
+        r.kwargs['max_attempts'] = 1
         r.load_step(steps.SimpleCommandStep('setup-neutron-ironic',
                                             './helpers/setup-neutron-ironic',
-                                            **steps.KWARGS))
+                                            **r.kwargs))
         r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # Must be the last step
-    steps.KWARGS['max_attempts'] = 1
+    r.kwargs['max_attempts'] = 1
     r.load_step(steps.SimpleCommandStep('COMPLETION-TOMBSTONE',
                                         '/bin/true',
-                                        **steps.KWARGS))
+                                        **r.kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
 

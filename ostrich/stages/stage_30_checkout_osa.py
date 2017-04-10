@@ -23,13 +23,14 @@ def get_steps(r):
             'git-clone-osa',
             ('git clone %s/openstack/openstack-ansible '
              '/opt/openstack-ansible'
-             % r.complete['git-mirror-openstack'])
-            ),
-            **steps.KWARGS
+             % r.complete['git-mirror-openstack']),
+            **r.kwargs
+            )
         )
     nextsteps.append(
         steps.KwargsStep(
             'kwargs-osa',
+            r,
             {
                 'cwd': '/opt/openstack-ansible',
                 'env': {
@@ -38,7 +39,7 @@ def get_steps(r):
                     'ANSIBLE_KEEP_REMOTE_FILES': '1'
                 }
             },
-            **steps.KWARGS
+            **r.kwargs
             )
         )
 
@@ -46,12 +47,13 @@ def get_steps(r):
         nextsteps.append(
             steps.KwargsStep(
                 'kwargs-ironic',
+                r,
                 {
                     'env': {
                         'BOOTSTRAP_OPTS': 'nova_virt_type=ironic'
                     }
                 },
-                **steps.KWARGS
+                **r.kwargs
                 )
             )
 
@@ -59,7 +61,7 @@ def get_steps(r):
         steps.SimpleCommandStep(
             'git-checkout-osa',
             'git checkout %s' % r.complete['osa-branch'],
-            **steps.KWARGS
+            **r.kwargs
             )
         )
     return nextsteps

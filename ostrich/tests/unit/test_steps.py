@@ -22,11 +22,12 @@ from ostrich.tests.unit import utils as test_utils
 class KwargsStepTestCase(base.BaseTestCase):
     @mock.patch('ostrich.emitters.SimpleEmitter', emitters.NoopEmitter)
     def test_kwargs_step(self):
-        steps.KWARGS = {}
         r = test_utils.QuestionsAnsweredRunner(None)
+        r.kwargs = {}
 
         s = steps.KwargsStep(
             'kwargs-osa-tests',
+            r,
             {
                 'cwd': '/opt/openstack-ansible',
                 'env': {
@@ -35,10 +36,10 @@ class KwargsStepTestCase(base.BaseTestCase):
                     'ANSIBLE_KEEP_REMOTE_FILES': '1'
                 }
             },
-            **steps.KWARGS
+            **r.kwargs
             )
         r.load_step(s)
         r.resolve_steps(use_curses=False)
 
-        self.assertEqual('/opt/openstack-ansible', steps.KWARGS['cwd'])
-        self.assertEqual('1', steps.KWARGS['env']['ANSIBLE_KEEP_REMOTE_FILES'])
+        self.assertEqual('/opt/openstack-ansible', r.kwargs['cwd'])
+        self.assertEqual('1', r.kwargs['env']['ANSIBLE_KEEP_REMOTE_FILES'])

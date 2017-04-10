@@ -21,26 +21,26 @@ def get_steps(r):
         steps.SimpleCommandStep(
             'apt-update',
             'apt-get update',
-            **steps.KWARGS)
+            **r.kwargs)
         )
     nextsteps.append(
         steps.SimpleCommandStep(
             'apt-upgrade',
             'apt-get upgrade -y',
-            **steps.KWARGS)
+            **r.kwargs)
         )
     nextsteps.append(
         steps.SimpleCommandStep(
             'apt-dist-upgrade',
             'apt-get dist-upgrade -y',
-            **steps.KWARGS
+            **r.kwargs
             )
         )
     nextsteps.append(
         steps.SimpleCommandStep(
             'apt-useful',
             'apt-get install -y screen ack-grep git expect lxc',
-            **steps.KWARGS
+            **r.kwargs
             )
         )
     return nextsteps

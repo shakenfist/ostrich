@@ -1,6 +1,8 @@
 CHANGES
 =======
 
+* Use central KWARGS
+* Handle recursive dictionary updates correctly
 * A second attempt at a working kwargs step
 * KwargsStep must return True
 * Fix KwargsStep and testability

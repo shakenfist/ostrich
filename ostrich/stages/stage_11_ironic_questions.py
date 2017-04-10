@@ -29,7 +29,7 @@ def get_steps(r):
                  'Please specify this as a CIDR range, for example '
                  '192.168.52.0/24.'),
                 'Ironic IP Block',
-                **steps.KWARGS
+                **r.kwargs
                 )
             )
     return nextsteps
