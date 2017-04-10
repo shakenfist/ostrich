@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Refactor more stages into their own files
 * Re-write apt-daily step to be pythonic
 * Load the dynamic dependancy chain
 * Fix module loading

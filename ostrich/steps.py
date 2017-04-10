@@ -64,7 +64,7 @@ class Step(object):
 
 class KwargsStep(Step):
     def __init__(self, name, kwarg_updates=None, **kwargs):
-        self.name
+        self.name = name
         self.kwarg_updates = kwarg_updates
         self.kwargs = kwargs
 

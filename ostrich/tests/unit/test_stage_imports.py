@@ -12,10 +12,16 @@
 
 
 import importlib
+import os
 
 from oslotest import base
 from ostrich import runner
 from ostrich import stage_loader
+
+
+class QuestionsAnsweredRunner(runner.Runner):
+    def _get_state_path(self):
+        return os.path.join(os.path.dirname(__file__), 'state.json')
 
 
 class StageImportsTestCase(base.BaseTestCase):
@@ -24,7 +30,9 @@ class StageImportsTestCase(base.BaseTestCase):
         self.assertEqual('stage_00_before_anything.py', sl[0])
 
     def test_stage_importability(self):
-        r = runner.Runner(None)
+        r = QuestionsAnsweredRunner(None)
+        print r._get_state_path()
+        self.assertNotEqual(0, len(r.complete))
 
         for stage_pyname in stage_loader.discover_stages():
             name = stage_pyname.replace('.py', '')

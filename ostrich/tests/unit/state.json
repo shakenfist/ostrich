@@ -1,0 +1,13 @@
+{
+    "complete": {
+        "git-mirror-github": "git://git.lab.rcbops.com", 
+        "git-mirror-host-keys": true, 
+        "git-mirror-openstack": "git://git.lab.rcbops.com", 
+        "http-proxy": "http://192.168.50.1:3128", 
+        "hypervisor": "ironic", 
+        "ironic-ip-block": "192.168.53.0/24", 
+        "local-cache": "192.168.50.1", 
+        "osa-branch": "stable/mitaka"
+    }, 
+    "counter": 0
+}

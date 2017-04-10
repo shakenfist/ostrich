@@ -26,9 +26,7 @@ class Runner(object):
 
         self.steps = {}
 
-        self.state_path = os.path.expanduser('~/.ostrich/state.json')
-        if not os.path.exists(os.path.expanduser('~/.ostrich')):
-            os.mkdir(os.path.expanduser('~/.ostrich'))
+        self.state_path = self._get_state_path()
 
         self.complete = {}
         self.counter = 0
@@ -37,6 +35,12 @@ class Runner(object):
                 state = json.loads(f.read())
                 self.complete = state.get('complete', {})
                 self.counter = state.get('counter', 0)
+
+    def _get_state_path(self):
+        if not os.path.exists(os.path.expanduser('~/.ostrich')):
+            os.mkdir(os.path.expanduser('~/.ostrich'))
+
+        return os.path.expanduser('~/.ostrich/state.json')
 
     def load_step(self, step):
         if step.name in self.complete:
