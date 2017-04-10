@@ -1,6 +1,8 @@
 CHANGES
 =======
 
+* KwargsStep must return True
+* Fix KwargsStep and testability
 * Refactor more stages into their own files
 * Re-write apt-daily step to be pythonic
 * Load the dynamic dependancy chain

@@ -27,6 +27,9 @@ import yaml
 import emitters
 
 
+KWARGS = {}
+
+
 def _handle_path_in_cwd(path, cwd):
     if not cwd:
         return path
@@ -63,14 +66,14 @@ class Step(object):
 
 
 class KwargsStep(Step):
-    def __init__(self, name, kwarg_updates=None, **kwargs):
-        self.name = name
+    def __init__(self, name, kwarg_updates, **kwargs):
+        super(KwargsStep, self).__init__(name, **kwargs)
         self.kwarg_updates = kwarg_updates
-        self.kwargs = kwargs
 
     def run(self, emit, screen):
-        self.kwargs.update(self.kwarg_updates)
-        emit.emit(json.dumps(self.kwargs, indent=4, sort_keys=True))
+        global KWARGS
+        KWARGS.update(self.kwarg_updates)
+        emit.emit(json.dumps(KWARGS, indent=4, sort_keys=True))
         return True
 
 

@@ -435,7 +435,6 @@ def deploy(screen):
         screen.nodelay(False)
 
     r = runner.Runner(screen)
-    kwargs = {}
 
     # Generic stage lookup tool. This allows deployers to add stages without
     # re-coding the underlying engine, and for new stages to be added without
@@ -443,36 +442,37 @@ def deploy(screen):
     for stage_pyname in stage_loader.discover_stages():
         name = stage_pyname.replace('.py', '')
         module = importlib.import_module('ostrich.stages.%s' % name)
-        r.load_dependancy_chain(module.get_steps(r, **kwargs))
+        r.load_dependancy_chain(module.get_steps(r, **steps.KWARGS))
         r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.load_dependancy_chain(stage5_configure_osa_before_bootstrap(r, **kwargs))
+    r.load_dependancy_chain(stage5_configure_osa_before_bootstrap(
+            r, **steps.KWARGS))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.load_dependancy_chain(stage6_bootstrap(r, **kwargs))
+    r.load_dependancy_chain(stage6_bootstrap(r, **steps.KWARGS))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.load_dependancy_chain(stage7_user_variables(r, **kwargs))
+    r.load_dependancy_chain(stage7_user_variables(r, **steps.KWARGS))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     if utils.is_ironic(r):
-        r.load_dependancy_chain(stage8_ironic_networking(r, **kwargs))
+        r.load_dependancy_chain(stage8_ironic_networking(r, **steps.KWARGS))
         r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.load_dependancy_chain(stage9_final_configuration(r, **kwargs))
+    r.load_dependancy_chain(stage9_final_configuration(r, **steps.KWARGS))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # The last of the things, run only once
-    kwargs['max_attempts'] = 1
+    steps.KWARGS['max_attempts'] = 1
     r.load_step(
         steps.AnsibleTimingSimpleCommandStep(
             'run-playbooks',
             './scripts/run-playbooks.sh',
             os.path.expanduser('~/.ostrich/run-playbook-timings.json'),
-            **kwargs))
+            **steps.KWARGS))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    kwargs['cwd'] = None
+    steps.KWARGS['cwd'] = None
 
     #####################################################################
     # Release specific steps: Mitaka
@@ -481,7 +481,7 @@ def deploy(screen):
             steps.SimpleCommandStep(
                 'add-ironic-to-nova-venv',
                 './helpers/add-ironic-to-nova-venv',
-                **kwargs)
+                **steps.KWARGS)
             )
 
         r.resolve_steps(use_curses=(not ARGS.no_curses))
@@ -491,47 +491,47 @@ def deploy(screen):
     r.load_dependancy_chain(
         [steps.SimpleCommandStep('lxc-details',
                                  './helpers/lxc-details',
-                                 **kwargs),
+                                 **steps.KWARGS),
          steps.SimpleCommandStep('pip-ruin-everything',
                                  ('pip install python-openstackclient '
                                   'python-ironicclient'),
-                                 **kwargs),
+                                 **steps.KWARGS),
          steps.SimpleCommandStep('os-cmd-bootstrap',
                                  './helpers/os-cmd-bootstrap',
-                                 **kwargs)
+                                 **steps.KWARGS)
          ])
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    kwargs['max_attempts'] = 3
-    kwargs['failing_step_delay'] = 150
+    steps.KWARGS['max_attempts'] = 3
+    steps.KWARGS['failing_step_delay'] = 150
 
     # Remove our HTTP proxy settings because the interfere with talking to
     # OpenStack
-    kwargs['env']['http_proxy'] = ''
-    kwargs['env']['https_proxy'] = ''
-    kwargs['env']['HTTP_PROXY'] = ''
-    kwargs['env']['HTTPS_PROXY'] = ''
+    steps.KWARGS['env']['http_proxy'] = ''
+    steps.KWARGS['env']['https_proxy'] = ''
+    steps.KWARGS['env']['HTTP_PROXY'] = ''
+    steps.KWARGS['env']['HTTPS_PROXY'] = ''
 
     r.load_dependancy_chain(
         [steps.SimpleCommandStep(
                 'openstack-details',
                 './helpers/openstack-details',
-                **kwargs)
+                **steps.KWARGS)
         ])
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     if utils.is_ironic(r):
-        kwargs['max_attempts'] = 1
+        steps.KWARGS['max_attempts'] = 1
         r.load_step(steps.SimpleCommandStep('setup-neutron-ironic',
                                             './helpers/setup-neutron-ironic',
-                                            **kwargs))
+                                            **steps.KWARGS))
         r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # Must be the last step
-    kwargs['max_attempts'] = 1
+    steps.KWARGS['max_attempts'] = 1
     r.load_step(steps.SimpleCommandStep('COMPLETION-TOMBSTONE',
                                         '/bin/true',
-                                        **kwargs))
+                                        **steps.KWARGS))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
 
