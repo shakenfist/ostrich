@@ -25,16 +25,19 @@ class Runner(object):
         self.screen = screen
 
         self.steps = {}
-        self.kwargs = {}
 
         self.complete = {}
         self.counter = 0
+        self.kwargs = {}
+        self.tested = {}
+
         if os.path.exists(self._get_state_path()):
             with open(self._get_state_path(), 'r') as f:
                 state = json.loads(f.read())
                 self.complete = state.get('complete', {})
                 self.counter = state.get('counter', 0)
                 self.kwargs = state.get('kwargs', {})
+                self.tested = state.get('tested', {})
 
     def _get_state_path(self):
         if not os.path.exists(os.path.expanduser('~/.ostrich')):
@@ -120,9 +123,12 @@ class Runner(object):
 
                     if self._get_state_path():
                         with open(self._get_state_path(), 'w') as f:
-                            f.write(json.dumps({'complete': self.complete,
-                                                'counter': self.counter,
-                                                'kwargs': self.kwargs},
+                            f.write(json.dumps({
+                                        'complete': self.complete,
+                                        'counter': self.counter,
+                                        'kwargs': self.kwargs,
+                                        'tested': self.tested,
+                                        },
                                                indent=4, sort_keys=True))
 
             for step_name in complete:
