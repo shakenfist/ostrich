@@ -1,5 +1,17 @@
-import curses
-import datetime
+#!/usr/bin/env python
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import fcntl
 import json
 import os
@@ -9,11 +21,11 @@ import select
 import shutil
 import subprocess
 import sys
-import textwrap
 import time
 import yaml
 
 import emitters
+import utils
 
 
 def _handle_path_in_cwd(path, cwd):
@@ -27,6 +39,8 @@ def _handle_path_in_cwd(path, cwd):
 class Step(object):
     def __init__(self, name, **kwargs):
         self.name = name
+        self.kwargs = kwargs
+
         self.depends = kwargs.get('depends', None)
         self.attempts = 0
         self.max_attempts = kwargs.get('max_attempts', 5)
@@ -48,7 +62,21 @@ class Step(object):
             sys.exit(1)
 
         emit.emit('Running %s' % self)
+        emit.emit('   with kwargs: %s' % self.kwargs)
+        emit.emit('\n')
         return self._run(emit, screen)
+
+
+class KwargsStep(Step):
+    def __init__(self, name, r, kwarg_updates, **kwargs):
+        super(KwargsStep, self).__init__(name, **kwargs)
+        self.r = r
+        self.kwarg_updates = kwarg_updates
+
+    def run(self, emit, screen):
+        utils.recursive_dictionary_update(self.r.kwargs, self.kwarg_updates)
+        emit.emit(json.dumps(self.r.kwargs, indent=4, sort_keys=True))
+        return True
 
 
 class SimpleCommandStep(Step):
@@ -132,7 +160,6 @@ class AnsibleTimingSimpleCommandStep(SimpleCommandStep):
         if os.path.exists(self.timings_path):
             with open(self.timings_path, 'r') as f:
                 self.timings = json.loads(f.read())
-        
 
     def _output_analysis(self, d):
         for line in d.split('\n'):
@@ -228,7 +255,6 @@ class BulkRegexpEditorStep(Step):
         return changes
 
 
-
 class FileAppendStep(Step):
     def __init__(self, name, path, text, **kwargs):
         super(FileAppendStep, self).__init__(name, **kwargs)
@@ -245,7 +271,6 @@ class FileAppendStep(Step):
         return True
 
 
-
 class FileCreateStep(Step):
     def __init__(self, name, path, text, **kwargs):
         super(FileCreateStep, self).__init__(name, **kwargs)
@@ -260,7 +285,6 @@ class FileCreateStep(Step):
         with open(self.path, 'w') as f:
             f.write(self.text)
         return True
-
 
 
 class CopyFileStep(Step):
@@ -302,7 +326,7 @@ class YamlAddElementStep(Step):
 
 
 class YamlUpdateElementStep(Step):
-    def __init__(self, name, path, target_element_path, target_key, data, 
+    def __init__(self, name, path, target_element_path, target_key, data,
                  **kwargs):
         super(YamlUpdateElementStep, self).__init__(name, **kwargs)
         self.path = _handle_path_in_cwd(path, kwargs.get('cwd'))

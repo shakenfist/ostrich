@@ -1,9 +1,24 @@
+#!/usr/bin/env python
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import curses
 import datetime
 import gzip
 import os
 import sys
 import textwrap
+
 
 class NoopEmitter(object):
     def __init__(self, progname, output):
@@ -55,8 +70,8 @@ class Emitter(LoggingEmitter):
                     try:
                         self.output.addstr(height - 2, 2, l)
                     except Exception as e:
-                        print 'Exception: %s' % e
-                        print '>>%s<<' % line
+                        print('Exception: %s' % e)
+                        print('>>%s<<' % line)
                         sys.exit(1)
 
         self.output.border()

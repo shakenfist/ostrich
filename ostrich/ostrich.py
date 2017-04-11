@@ -17,287 +17,19 @@
 
 import argparse
 import curses
-import datetime
+import importlib
 import ipaddress
-import json
 import os
-import psutil
-import re
-import select
-import subprocess
 import sys
-import textwrap
-import time
 import urlparse
 
-import emitters
+import runner
+import stage_loader
 import steps
+import utils
 
 
-progname = os.path.basename(__file__)
 ARGS = None
-
-
-def is_ironic(r):
-    return r.complete['hypervisor'] == 'ironic'
-
-
-def expand_ironic_netblock(r):
-    net = ipaddress.ip_network(r.complete['ironic-ip-block'])
-    hosts = []
-    for h in net.hosts():
-        hosts.append(str(h))
-
-    return net, hosts
-
-
-class Runner(object):
-    def __init__(self, screen):
-        self.screen = screen
-
-        self.steps = {}
-
-        self.state_path = os.path.expanduser('~/.%s/state.json' % progname)
-        if not os.path.exists(os.path.expanduser('~/.%s' % progname)):
-            os.mkdir(os.path.expanduser('~/.%s' % progname))
-
-        self.complete = {}
-        self.counter = 0
-        if os.path.exists(self.state_path):
-            with open(self.state_path, 'r') as f:
-                state = json.loads(f.read())
-                self.complete = state.get('complete', {})
-                self.counter = state.get('counter', 0)
-
-    def load_step(self, step):
-        if step.name in self.complete:
-            print ('You cannot load a new step with the same name as an '
-                   'already complete step! The re-used name is %s.'
-                   % step.name)
-        if step.name in self.steps:
-            print ('You cannot load a new step with the same name as an '
-                   'already pending step! The re-used name is %s.'
-                   % step.name)
-        self.steps[step.name] = step
-
-    def load_dependancy_chain(self, steps, depends=None):
-        depend = depends
-        for step in steps:
-            step.depends = depend
-            depend = step.name
-            self.load_step(step)
-
-    def resolve_steps(self):
-        if not ARGS.no_curses:
-            # Setup curses windows for the steps view
-            height, width = self.screen.getmaxyx()
-            progress = curses.newwin(3, width, 0, 0)
-            progress.border()
-            progress.refresh()
-
-            output = curses.newwin(height - 4, width, 3, 0)
-            output.scrollok(True)
-            output.border()
-            output.refresh()
-            emitter = emitters.Emitter(progname, output)
-        else:
-            output = None
-            emitter = emitters.SimpleEmitter(progname, output)
-
-        for step_name in self.complete:
-            if step_name in self.steps:
-                del self.steps[step_name]
-
-        run = [True]
-        complete = []
-
-        while len(run) > 0:
-            run = []
-            complete = []
-
-            for step_name in self.steps:
-                step = self.steps[step_name]
-
-                runnable = False
-                if not step.depends:
-                    runnable = True
-
-                if self.complete.get(step.depends, False):
-                    runnable = True
-
-                if runnable:
-                    if not ARGS.no_curses:
-                        progress.clear()
-                        progress.addstr(1, 3, '%s %d steps to run, running %s'
-                                        % (datetime.datetime.now(),
-                                           len(self.steps),
-                                           step_name))
-                        progress.border()
-                        progress.refresh()
-
-                    run.append(step_name)
-                    emitter.clear()
-                    emitter.logger('%06d-%s' % (self.counter, step_name))
-                    outcome = step.run(emitter, self.screen)
-                    self.counter += 1
-
-                    if outcome:
-                        self.complete[step_name] = outcome
-                        complete.append(step_name)
-
-                    with open(self.state_path, 'w') as f:
-                        f.write(json.dumps({'complete': self.complete,
-                                            'counter': self.counter},
-                                           indent=4, sort_keys=True))
-
-            for step_name in complete:
-                del self.steps[step_name]
-
-        if len(self.steps) > 0:
-            s = []
-            for step in self.steps:
-                s.append(str(step))
-
-            print('Warning! Resolving steps did not process all outstanding '
-                  'steps! This indicates a step that was expected to have '
-                  'run has not. Outstanding steps are: %s' % '; '.join(s))
-            sys.exit(1)
-
-
-def stage1_before_anything(r):
-    """Things to do before attempting anything."""
-
-    nextsteps = []
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'apt-daily',
-            ('while [ `ps -ef | grep apt.systemd.daily | '
-             'grep -vc "grep"` -gt 0 ]; do '
-             'echo "Waiting for daily apt run to end"; sleep 10; done')
-            )
-        )
-    return nextsteps
-
-
-def stage2_user_questions(r):
-    """Things we need the user to tell us."""
-
-    nextsteps = []
-    nextsteps.append(
-        steps.QuestionStep(
-            'git-mirror-github',
-            'Are you running a local github.com mirror?',
-            ('Mirroring github.com speeds up setup on slow and '
-             'unreliable networks, but means that you have to '
-             'maintain a mirror somewhere on your corporate network. '
-             'If you are unsure, just enter "git://github.com" here. '
-             'Otherwise, we need an answer in the form of '
-             '<protocol>://<server>, for example '
-             'git://gitmirror.example.com'),
-            'Mirror URL'
-            )
-        )
-    nextsteps.append(
-        steps.QuestionStep(
-            'git-mirror-openstack',
-            'Are you running a local git.openstack.org mirror?',
-            ('Mirroring git.openstack.org speeds up setup on slow '
-             'and unreliable networks, but means that you have to '
-             'maintain a mirror somewhere on your corporate network. '
-             'If you are unsure, just enter '
-             '"git://git.openstack.org" here. Otherwise, we need an '
-             'answer in the form of <protocol>://<server>, for '
-             'example git://gitmirror.example.com'),
-            'Mirror URL'
-            )
-        )
-    nextsteps.append(
-        steps.QuestionStep(
-            'osa-branch',
-            'What OSA branch (or commit SHA) would you like to use?',
-            'Use stable/newton unless you know what you are doing.',
-            'OSA branch'
-            )
-        )
-    nextsteps.append(
-        steps.QuestionStep(
-            'http-proxy',
-            'Are you running a local http proxy?',
-            ('OSA will download large objects such as LXC base '
-             'images. If you have a slow network, or are on a '
-             'corporate network which requires a proxy, configure it '
-             'here with a URL like http://cache.example.com:3128 . '
-             'If you do not use a proxy, please enter "none" here.'),
-            'HTTP Proxy'
-            )
-         )
-    nextsteps.append(
-        steps.QuestionStep(
-            'hypervisor',
-            'What hypervisor do you want to run?',
-            'Possible answers are "ironic" or "kvm".',
-            'Hypervisor'
-            )
-        )
-    nextsteps.append(
-        steps.QuestionStep(
-            'local-cache',
-            'Local caching',
-            ('Do you locally cache rpc-repo.rackspace.com? If so, we expect '
-             'the cache to be in a directory named rpc-repo.rackspace.com '
-             'on your cache web server. Please enter the hostname for that '
-             'server here. If you do not cache, just enter "none" here.'),
-            'Local Cache'
-            )
-        )
-    return nextsteps
-
-
-def stage3_apt(r):
-    """Prepare apt."""
-
-    nextsteps = []
-    nextsteps.append(
-        steps.SimpleCommandStep('apt-update', 'apt-get update')
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep('apt-upgrade', 'apt-get upgrade -y')
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'apt-dist-upgrade',
-            'apt-get dist-upgrade -y'
-            )
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'apt-useful',
-            'apt-get install -y screen ack-grep git expect lxc'
-            )
-        )
-    return nextsteps
-
-
-def stage4_checkout_osa(r, **kwargs):
-    """Clone and checkout OSA."""
-
-    nextsteps = []
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'git-clone-osa',
-            ('git clone %s/openstack/openstack-ansible '
-             '/opt/openstack-ansible'
-             % r.complete['git-mirror-openstack'])
-            )
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'git-checkout-osa',
-            'git checkout %s' % r.complete['osa-branch'],
-            **kwargs
-            )
-        )
-    return nextsteps
 
 
 def stage5_configure_osa_before_bootstrap(r, **kwargs):
@@ -313,7 +45,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
         local_servers = 'localhost,127.0.0.1'
         if r.complete['local-cache'] != 'none':
             local_servers += ',%s' % r.complete['local-cache']
-            
+
         nextsteps.append(
             steps.FileAppendStep(
                 'proxy-environment',
@@ -369,7 +101,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
     #########################################################################
     # Release specific steps: Newton
     if r.complete['osa-branch'] == 'stable/newton':
-        if is_ironic(r):
+        if utils.is_ironic(r):
             nextsteps.append(
                 steps.SimpleCommandStep(
                     'fixup-add-ironic-newton',
@@ -413,7 +145,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
                     **kwargs)
                 )
 
-        if is_ironic(r):
+        if utils.is_ironic(r):
             nextsteps.append(
                 steps.SimpleCommandStep(
                     'fixup-add-ironic-mitaka',
@@ -446,8 +178,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
              'plain/upper-constraints.txt?id='
              '$(awk \'/requirements_git_install_branch:/ {print $2}\' '
              '/opt/openstack-ansible/playbooks/defaults/repo_packages/'
-             'openstack_services.yml) -o ~/.%s/upper-contraints.txt'
-             % progname),
+             'openstack_services.yml) -o ~/.ostrich/upper-contraints.txt'),
             **kwargs)
         )
 
@@ -535,7 +266,7 @@ def stage7_user_variables(r, **kwargs):
         )
 
     # Release specific steps: Mitaka
-    if r.complete['osa-branch'] == 'stable/mitaka' and is_ironic(r):
+    if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
         nextsteps.append(
             steps.FileAppendStep(
                 'enable-ironic',
@@ -568,7 +299,7 @@ def stage8_ironic_networking(r, **kwargs):
                   'net_name': 'ironic',
                   'ip_from_q': 'ironic'
                   }
-             },
+            },
             **kwargs)
         )
 
@@ -607,7 +338,7 @@ def stage8_ironic_networking(r, **kwargs):
             'reserve-netblock-start',
             '/etc/openstack_deploy/openstack_user_config.yml',
             ['used_ips'],
-            '%s,%s' %(hosts[0], hosts[10]),
+            '%s,%s' % (hosts[0], hosts[10]),
             **kwargs)
         )
     nextsteps.append(
@@ -615,7 +346,7 @@ def stage8_ironic_networking(r, **kwargs):
             'reserve-netblock-end',
             '/etc/openstack_deploy/openstack_user_config.yml',
             ['used_ips'],
-            '%s,%s' %(hosts[-10], hosts[-1]),
+            '%s,%s' % (hosts[-10], hosts[-1]),
             **kwargs)
         )
     nextsteps.append(
@@ -644,6 +375,7 @@ def stage8_ironic_networking(r, **kwargs):
         )
 
     return nextsteps
+
 
 def stage9_final_configuration(r, **kwargs):
     """Final tweaks to configuration before we run the playbooks."""
@@ -681,7 +413,7 @@ def stage9_final_configuration(r, **kwargs):
             **kwargs))
 
     # Release specific steps: Mitaka
-    if r.complete['osa-branch'] == 'stable/mitaka' and is_ironic(r):
+    if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
         nextsteps.append(
             steps.CopyFileStep(
                 'enable-ironic-environment-mitaka',
@@ -693,128 +425,95 @@ def stage9_final_configuration(r, **kwargs):
     return nextsteps
 
 
-def main(screen):
+def deploy(screen):
+    global ARGS
+
     if not ARGS.no_curses:
         screen.nodelay(False)
 
-    r = Runner(screen)
+    r = runner.Runner(screen)
 
-    r.load_dependancy_chain(stage1_before_anything(r))
-    r.resolve_steps()
+    # Generic stage lookup tool. This allows deployers to add stages without
+    # re-coding the underlying engine, and for new stages to be added without
+    # a lot of plumbing.
+    for stage_pyname in stage_loader.discover_stages():
+        name = stage_pyname.replace('.py', '')
+        module = importlib.import_module('ostrich.stages.%s' % name)
+        r.load_dependancy_chain(module.get_steps(r))
+        r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.load_dependancy_chain(stage2_user_questions(r))
-    r.resolve_steps()
+    r.load_dependancy_chain(stage5_configure_osa_before_bootstrap(
+            r, **r.kwargs))
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    if is_ironic(r):
-        nextsteps = [
-            steps.QuestionStep(
-                'ironic-ip-block',
-                'IP block for Ironic nodes',
-                ('We need to know what IP range to use for the neutron '
-                 'network that Ironic nodes appear on. This block is managed '
-                 'by neutronso should be separate from your primary netblock. '
-                 'Please specify this as a CIDR range, for example '
-                 '192.168.52.0/24.'),
-                'Ironic IP Block'
-                )
-            ]
-        r.load_dependancy_chain(nextsteps)
-        r.resolve_steps()
+    r.load_dependancy_chain(stage6_bootstrap(r, **r.kwargs))
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.load_dependancy_chain(stage3_apt(r))
-    r.resolve_steps()
+    r.load_dependancy_chain(stage7_user_variables(r, **r.kwargs))
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    # ANSIBLE_ROLE_FETCH_MODE - git checkout ansible roles, don't use galaxy
-    # BOOTSTRAP_OPTS - specify ironic as Nova's virt type
-    kwargs = {
-        'cwd': '/opt/openstack-ansible',
-        'env': {
-            'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
-            # 'ANSIBLE_DEBUG': '1',
-            'ANSIBLE_KEEP_REMOTE_FILES': '1'
-            }
-        }
+    if utils.is_ironic(r):
+        r.load_dependancy_chain(stage8_ironic_networking(r, **r.kwargs))
+        r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    if is_ironic(r):
-        kwargs['env']['BOOTSTRAP_OPTS'] = 'nova_virt_type=ironic'
-
-    r.load_dependancy_chain(stage4_checkout_osa(r, **kwargs))
-    r.resolve_steps()
-
-    r.load_dependancy_chain(stage5_configure_osa_before_bootstrap(r, **kwargs))
-    r.resolve_steps()
-
-    r.load_dependancy_chain(stage6_bootstrap(r, **kwargs))
-    r.resolve_steps()
-
-    r.load_dependancy_chain(stage7_user_variables(r, **kwargs))
-    r.resolve_steps()
-
-    if is_ironic(r):
-        r.load_dependancy_chain(stage8_ironic_networking(r, **kwargs))
-        r.resolve_steps()
-
-    r.load_dependancy_chain(stage9_final_configuration(r, **kwargs))
-    r.resolve_steps()
+    r.load_dependancy_chain(stage9_final_configuration(r, **r.kwargs))
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # The last of the things, run only once
-    kwargs['max_attempts'] = 1
+    r.kwargs['max_attempts'] = 1
     r.load_step(
         steps.AnsibleTimingSimpleCommandStep(
             'run-playbooks',
             './scripts/run-playbooks.sh',
-            os.path.expanduser('~/.%s/run-playbook-timings.json'
-                               % progname),
-            **kwargs))
-    r.resolve_steps()
+            os.path.expanduser('~/.ostrich/run-playbook-timings.json'),
+            **r.kwargs))
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    kwargs['cwd'] = None
+    r.kwargs['cwd'] = None
 
     #####################################################################
     # Release specific steps: Mitaka
-    if r.complete['osa-branch'] == 'stable/mitaka' and is_ironic(r):
+    if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
         r.load_step(
             steps.SimpleCommandStep(
                 'add-ironic-to-nova-venv',
                 './helpers/add-ironic-to-nova-venv',
-                **kwargs)
+                **r.kwargs)
             )
 
-        r.resolve_steps()
+        r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # Debug output that might be helpful, not scripts are running from
     # ostrich directory
     r.load_dependancy_chain(
-        [steps.SimpleCommandStep(
-                'lxc-details',
-                './helpers/lxc-details',
-                **kwargs),
-         steps.SimpleCommandStep(
-                'pip-ruin-everything',
-                'pip install python-openstackclient python-ironicclient',
-                **kwargs),
-         steps.SimpleCommandStep(
-                'os-cmd-bootstrap',
-                './helpers/os-cmd-bootstrap',
-                **kwargs)
+        [steps.SimpleCommandStep('lxc-details',
+                                 './helpers/lxc-details',
+                                 **r.kwargs),
+         steps.SimpleCommandStep('pip-ruin-everything',
+                                 ('pip install python-openstackclient '
+                                  'python-ironicclient'),
+                                 **r.kwargs),
+         steps.SimpleCommandStep('os-cmd-bootstrap',
+                                 './helpers/os-cmd-bootstrap',
+                                 **r.kwargs)
          ])
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    kwargs['max_attempts'] = 3
-    kwargs['failing_step_delay'] = 150
+    r.kwargs['max_attempts'] = 3
+    r.kwargs['failing_step_delay'] = 150
 
     # Remove our HTTP proxy settings because the interfere with talking to
     # OpenStack
-    kwargs['env']['http_proxy'] = ''
-    kwargs['env']['https_proxy'] = ''
-    kwargs['env']['HTTP_PROXY'] = ''
-    kwargs['env']['HTTPS_PROXY'] = ''
+    r.kwargs['env']['http_proxy'] = ''
+    r.kwargs['env']['https_proxy'] = ''
+    r.kwargs['env']['HTTP_PROXY'] = ''
+    r.kwargs['env']['HTTPS_PROXY'] = ''
 
     r.load_dependancy_chain(
         [steps.SimpleCommandStep(
                 'openstack-details',
                 './helpers/openstack-details',
-                **kwargs)
+                **r.kwargs)
         ])
     r.resolve_steps()
 
@@ -831,17 +530,16 @@ def main(screen):
         r.resolve_steps()
 
     # Must be the last step
-    kwargs['max_attempts'] = 1
-    r.load_dependancy_chain(
-        [steps.SimpleCommandStep(
-                'COMPLETION-TOMBSTONE',
-                '/bin/true',
-                **kwargs)
-         ])
-    r.resolve_steps()
+    r.kwargs['max_attempts'] = 1
+    r.load_step(steps.SimpleCommandStep('COMPLETION-TOMBSTONE',
+                                        '/bin/true',
+                                        **r.kwargs))
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
 
-if __name__ == '__main__':
+def main():
+    global ARGS
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-screen', dest='no_screen',
                         default=False, action='store_true',
@@ -857,6 +555,6 @@ if __name__ == '__main__':
             sys.exit('Only run ostrich in a screen or tmux session please')
 
     if ARGS.no_curses:
-        main(None)
+        deploy(None)
     else:
-        curses.wrapper(main)
+        curses.wrapper(deploy)
