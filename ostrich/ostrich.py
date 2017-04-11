@@ -33,6 +33,15 @@ import utils
 ARGS = None
 
 
+def expand_ironic_netblock(r):
+    net = ipaddress.ip_network(r.complete['ironic-ip-block'])
+    hosts = []
+    for h in net.hosts():
+        hosts.append(str(h))
+
+    return net, hosts
+
+
 def stage5_configure_osa_before_bootstrap(r, **kwargs):
     """Do all the configuration we do before bootstrapping."""
 
