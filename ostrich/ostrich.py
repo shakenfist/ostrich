@@ -433,18 +433,10 @@ def stage9_final_configuration(r, **kwargs):
             )
 
     if utils.is_ironic(r):
-        # Determine the ironic network address of the ironic conductor
-        # container from the inventory file
-        inv = {}
-        with open('/etc/openstack_deploy/openstack_inventory.json') as f:
-            inv = json.loads(f.read())
-        ironic_conductor = inv['ironic_conductor']['hosts'][0]
-        ironic_conductor_address = inv['_meta']['hostvars'][ironic_conductor]['container_networks']['ironic_address']['address']
-
         nextsteps.append(
             steps.SimpleCommandStep(
                 'ironic-tftp-address',
-                ('sed -i -e \'s/ironic_tftp_server_address: "{{ ansible_ssh_host }}"/ironic_tftp_server_address: %s/\' /etc/ansible/roles/os_ironic/defaults/main.yml'
+                ('sed -i -e \'s/ironic_tftp_server_address: "{{ ansible_ssh_host }}"/ironic_tftp_server_address: {{ hostvars[inventory_hostname][\'container_networks\'][\'ironic_address\'][\'address\'] }}/\' /etc/ansible/roles/os_ironic/defaults/main.yml'
                  % ironic_conductor_address),
                 **kwargs)
             )
