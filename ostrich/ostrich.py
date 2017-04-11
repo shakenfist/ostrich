@@ -436,8 +436,7 @@ def stage9_final_configuration(r, **kwargs):
         nextsteps.append(
             steps.SimpleCommandStep(
                 'ironic-tftp-address',
-                ('sed -i -e \'s/ironic_tftp_server_address: "{{ ansible_ssh_host }}"/ironic_tftp_server_address: {{ hostvars[inventory_hostname][\'container_networks\'][\'ironic_address\'][\'address\'] }}/\' /etc/ansible/roles/os_ironic/defaults/main.yml'
-                 % ironic_conductor_address),
+                ('sed -i -e \'s/ironic_tftp_server_address: "{{ ansible_ssh_host }}"/ironic_tftp_server_address: {{ hostvars[inventory_hostname][\'container_networks\'][\'ironic_address\'][\'address\'] }}/\' /etc/ansible/roles/os_ironic/defaults/main.yml')
                 **kwargs)
             )
 
