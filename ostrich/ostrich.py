@@ -312,10 +312,7 @@ def stage8_ironic_networking(r, **kwargs):
             **kwargs)
         )
 
-    net = ipaddress.ip_network(r.complete['ironic-ip-block'])
-    hosts = []
-    for h in net.hosts():
-        hosts.append(str(h))
+    net, hosts = expand_ironic_netblock(r)
 
     nextsteps.append(
         steps.YamlUpdateElementStep(
@@ -518,14 +515,19 @@ def deploy(screen):
                 './helpers/openstack-details',
                 **r.kwargs)
         ])
-    r.resolve_steps(use_curses=(not ARGS.no_curses))
+    r.resolve_steps()
 
-    if utils.is_ironic(r):
-        r.kwargs['max_attempts'] = 1
-        r.load_step(steps.SimpleCommandStep('setup-neutron-ironic',
-                                            './helpers/setup-neutron-ironic',
-                                            **r.kwargs))
-        r.resolve_steps(use_curses=(not ARGS.no_curses))
+    if is_ironic(r):
+        net, hosts = expand_ironic_netblock(r)
+        kwargs['max_attempts'] = 1
+        r.load_step(steps.SimpleCommandStep(
+                'setup-neutron-ironic',
+                ('./helpers/setup-neutron-ironic %s %s %s %s'
+                 % (r.complete['ironic-ip-block'],
+                    hosts[0], hosts[11], hosts[-11])
+                 ),
+                **kwargs))
+        r.resolve_steps()
 
     # Must be the last step
     r.kwargs['max_attempts'] = 1
