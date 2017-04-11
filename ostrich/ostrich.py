@@ -382,6 +382,7 @@ def stage8_ironic_networking(r, **kwargs):
             'add-ironic-interface-ip',
             'ifconfig eth1 inet %s up' % hosts[3],
             **kwargs)
+        )
 
     return nextsteps
 
@@ -430,7 +431,6 @@ def stage9_final_configuration(r, **kwargs):
                 '/etc/openstack_deploy/env.d/ironic.yml',
                 **kwargs)
             )
-        )
 
     if utils.is_ironic(r):
         # Determine the ironic network address of the ironic conductor
