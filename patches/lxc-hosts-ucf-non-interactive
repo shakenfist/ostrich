@@ -5,7 +5,7 @@
  - name: Prepare cached image
    command: "chroot {{ lxc_container_cache_path }}/{{ item[0].chroot_path }} {{ item[1] }}"
 +  environment:
-+    DEBIAN_FRONTEND: non-interactive
++    DEBIAN_FRONTEND: noninteractive
    with_nested:
      - lxc_container_caches
      - lxc_cache_commands
