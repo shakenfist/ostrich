@@ -188,7 +188,7 @@ class PatchStep(SimpleCommandStep):
 
         super(PatchStep, self).__init__(
             name,
-            'patch -p 1 < patches/%s' % name,
+            'patch -d / -p 1 < patches/%s' % name,
             **local_kwargs)
 
 
