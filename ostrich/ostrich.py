@@ -486,12 +486,36 @@ def deploy(screen):
 
     # The last of the things, run only once
     r.kwargs['max_attempts'] = 1
-    r.load_step(
-        steps.AnsibleTimingSimpleCommandStep(
-            'run-playbooks',
-            './scripts/run-playbooks.sh',
-            os.path.expanduser('~/.ostrich/run-playbook-timings.json'),
-            **r.kwargs))
+    r.kwargs['cwd'] = '/opt/openstack-ansible/playbooks'
+
+    nextsteps = []
+    playnames = [
+        'setup-hosts',
+        'setup-infrastructure',
+        'os-keystone-install',
+        'os-glance-install',
+        'os-cinder-install',
+        'os-nova-install',
+        'os-neutron-install',
+        'os-heat-install',
+        'os-horizon-install',
+        'os-ceilometer-install',
+        'os-aodh-install',
+        'os-swift-install'
+    ]
+
+    if utils.is_ironic(r):
+        playnames.append('os-ironic-install')
+
+    for play in playnames:
+        nextsteps.append(
+            steps.AnsibleTimingSimpleCommandStep(
+                play,
+                'openstack-ansible -vvv %s.yml' % play,
+                os.path.expanduser('~/.ostrich/timings-%s.json' % play),
+                **r.kwargs)
+        )
+    r.load_dependancy_chain(nextsteps)
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     r.kwargs['cwd'] = None
