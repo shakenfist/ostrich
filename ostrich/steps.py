@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import fcntl
 import json
 import os
@@ -178,6 +179,17 @@ class AnsibleTimingSimpleCommandStep(SimpleCommandStep):
             f.write(json.dumps(self.timings, indent=4))
 
         return res
+
+
+class PatchStep(SimpleCommandStep):
+    def __init__(self, name, **kwargs):
+        local_kwargs = copy.copy(kwargs)
+        local_kwargs['cwd'] = __file__.replace('ostrich/steps.py')
+
+        super(PatchStep, self).__init__(
+            name,
+            'patch -p 1 < patches/%s' % name,
+            **local_kwargs)
 
 
 class QuestionStep(Step):

@@ -79,7 +79,6 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
          r.complete['git-mirror-github']),
         ('(http|https|git)://git.openstack.org',
          r.complete['git-mirror-openstack']),
-        # ('apt-get', 'DEBIAN_FRONTEND=noninteractive apt-get')
         ]
 
     if r.complete['local-cache'] != 'none':
@@ -276,12 +275,7 @@ def stage7_user_variables(r, **kwargs):
             **kwargs)
         )
 
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'lxc-hosts-ucf-non-interactive',
-            """sed -i -e '/command: "chroot {{ lxc_container_cache_path }}/{{ item[0].chroot_path }} {{ item[1] }}"/  environment:\\n    DEBIAN_FRONTEND: noninteractive\\n'  /etc/ansible/roles/lxc_hosts/tasks/lxc_cache_preparation.yml""",
-            **kwargs)
-        )
+    nextsteps.append(steps.PatchStep('lxc-hosts-ucf-non-interactive', **kwargs))
 
     # Release specific steps: Mitaka
     if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
@@ -409,7 +403,6 @@ def stage9_final_configuration(r, **kwargs):
         ('https://mirror.rackspace.com',
          'http://mirror.rackspace.com'),
         (' +checksum:.*', ''),
-        # ('apt-get', 'DEBIAN_FRONTEND=noninteractive apt-get')
         ]
 
     if r.complete['local-cache'] != 'none':
