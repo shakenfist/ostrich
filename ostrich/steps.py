@@ -184,7 +184,7 @@ class AnsibleTimingSimpleCommandStep(SimpleCommandStep):
 class PatchStep(SimpleCommandStep):
     def __init__(self, name, **kwargs):
         local_kwargs = copy.copy(kwargs)
-        local_kwargs['cwd'] = __file__.replace('ostrich/steps.py')
+        local_kwargs['cwd'] = __file__.replace('ostrich/steps.py', '')
 
         super(PatchStep, self).__init__(
             name,
