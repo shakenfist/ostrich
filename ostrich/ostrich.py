@@ -276,6 +276,13 @@ def stage7_user_variables(r, **kwargs):
             **kwargs)
         )
 
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'lxc-hosts-ucf-non-interactive',
+            """sed -i -e '/command: "chroot {{ lxc_container_cache_path }}/{{ item[0].chroot_path }} {{ item[1] }}"/  environment:\\n    DEBIAN_FRONTEND: noninteractive\\n'  /etc/ansible/roles/lxc_hosts/tasks/lxc_cache_preparation.yml""",
+            **kwargs)
+        )
+
     # Release specific steps: Mitaka
     if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
         nextsteps.append(
@@ -567,7 +574,7 @@ def deploy(screen):
         ])
     r.resolve_steps()
 
-    if is_ironic(r):
+    if utils.is_ironic(r):
         net, hosts = expand_ironic_netblock(r)
         kwargs['max_attempts'] = 1
         r.load_step(steps.SimpleCommandStep(

@@ -1,6 +1,17 @@
 CHANGES
 =======
 
+* Fix bug for skipping caches for local servers
+* Revert "No, we definitely still need a non-interactive apt run"
+* No, we definitely still need a non-interactive apt run
+* DEBIAN_FRONTEND seems to be causing problems
+* No proxy for local cache
+* Break out run-playbooks into something more granular
+* Quote the hostvar
+* Fix silly typo
+* Remove unused variable
+* Try using the address from inventory
+* Fix syntax error
 * Move tftp / pxe config later in the build process
 * Cleanup sed a little
 * Add back missing expand_ironic_netblock
