@@ -79,7 +79,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
          r.complete['git-mirror-github']),
         ('(http|https|git)://git.openstack.org',
          r.complete['git-mirror-openstack']),
-        # ('apt-get', 'DEBIAN_FRONTEND=noninteractive apt-get')
+        ('apt-get', 'DEBIAN_FRONTEND=noninteractive apt-get')
         ]
 
     if r.complete['local-cache'] != 'none':
@@ -402,7 +402,7 @@ def stage9_final_configuration(r, **kwargs):
         ('https://mirror.rackspace.com',
          'http://mirror.rackspace.com'),
         (' +checksum:.*', ''),
-        # ('apt-get', 'DEBIAN_FRONTEND=noninteractive apt-get')
+        ('apt-get', 'DEBIAN_FRONTEND=noninteractive apt-get')
         ]
 
     if r.complete['local-cache'] != 'none':
