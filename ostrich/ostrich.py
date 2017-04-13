@@ -48,14 +48,15 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
     nextsteps = []
 
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
-        kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
-                              'https_proxy': r.complete['http-proxy']})
-
-        # This entry will only last until it is clobbered by ansible
         local_servers = 'localhost,127.0.0.1'
         if r.complete['local-cache'] != 'none':
             local_servers += ',%s' % r.complete['local-cache']
 
+        kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
+                              'https_proxy': r.complete['http-proxy'],
+                              'no_proxy': local_servers})
+
+        # This entry will only last until it is clobbered by ansible
         nextsteps.append(
             steps.FileAppendStep(
                 'proxy-environment',
