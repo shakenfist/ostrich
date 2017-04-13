@@ -246,7 +246,7 @@ def stage7_user_variables(r, **kwargs):
                   '  NO_PROXY: "{{ no_proxy_env }}"\n'
                   '  no_proxy: "{{ no_proxy_env }}"')
                  % {'proxy': r.complete['http-proxy'],
-                    'local': 'local_servers'}),
+                    'local': local_servers}),
                 **kwargs)
             )
 
