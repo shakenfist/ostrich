@@ -1,0 +1,10 @@
+--- /etc/ansible/roles/os_ironic/templates/ironic.conf.j2	2017-04-14 08:21:55.777896394 +1000
++++ /etc/ansible/roles/os_ironic/templates/ironic.conf.j2	2017-04-14 08:17:39.830611556 +1000
+@@ -134,6 +134,7 @@
+ 
+ [pxe]
+ tftp_server = {{ ironic_tftp_server_address }}
++pxe_append_params = coreos.autologin ipa-debug=1
+ 
+ [seamicro]
+ 

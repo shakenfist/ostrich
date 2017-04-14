@@ -434,19 +434,8 @@ def stage9_final_configuration(r, **kwargs):
             )
 
     if utils.is_ironic(r):
-        nextsteps.append(
-            steps.SimpleCommandStep(
-                'ironic-tftp-address',
-                ('sed -i -e \'s/ironic_tftp_server_address: "{{ ansible_ssh_host }}"/ironic_tftp_server_address: "{{ hostvars[inventory_hostname][\'container_networks\'][\'ironic_address\'][\'address\'] }}"/\' /etc/ansible/roles/os_ironic/defaults/main.yml'),
-                **kwargs)
-            )
-
-        nextsteps.append(
-            steps.SimpleCommandStep(
-                'ironic-pxe-options',
-                ('sed -i -e \'s/tftp_server = {{ ironic_tftp_server_address }}/tftp_server = {{ ironic_tftp_server_address }}\\npxe_append_params = coreos.autologin ipa-debug=1/\' /etc/ansible/roles/os_ironic/templates/ironic.conf.j2'),
-                **kwargs)
-            )
+        nextsteps.append(steps.PatchStep('ironic-tftp-address', **kwargs))
+        nextsteps.append(steps.PatchStep('ironic-pxe-options', **kwargs))
 
     return nextsteps
 
