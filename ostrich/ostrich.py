@@ -475,7 +475,7 @@ def deploy(screen):
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # The last of the things, run only once
-    r.kwargs['max_attempts'] = 1
+    r.kwargs['max_attempts'] = 3
     r.kwargs['cwd'] = '/opt/openstack-ansible/playbooks'
 
     nextsteps = []
