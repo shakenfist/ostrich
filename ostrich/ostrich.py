@@ -538,9 +538,6 @@ def deploy(screen):
          ])
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.kwargs['max_attempts'] = 3
-    r.kwargs['failing_step_delay'] = 150
-
     # Remove our HTTP proxy settings because the interfere with talking to
     # OpenStack
     r.kwargs['env']['http_proxy'] = ''
