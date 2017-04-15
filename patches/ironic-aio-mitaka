@@ -1,0 +1,11 @@
+--- /opt/openstack-ansible/tests/roles/bootstrap-host/tasks/prepare_aio_config.yml	2017-04-16 07:32:49.766325195 +1000
++++ /opt/openstack-ansible/tests/roles/bootstrap-host/tasks/prepare_aio_config.yml	2017-04-16 07:33:21.606722538 +1000
+@@ -90,6 +90,8 @@
+       override: "{{ ceilometer_conf_overrides | default({}) }}"
+     - name: swift.yml.aio
+       override: "{{ swift_conf_overrides | default({}) }}"
++    - name: ironic.yml.aio
++      override: "{{ ironic_conf_overrides | default({}) }}"
+   tags:
+     - deploy-confd
+ 

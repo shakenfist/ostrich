@@ -156,12 +156,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
                 )
 
         if utils.is_ironic(r):
-            nextsteps.append(
-                steps.SimpleCommandStep(
-                    'fixup-add-ironic-mitaka',
-                    """sed -i -e '/swift_conf_overrides | default/ a \\    - name: ironic.yml.aio\\n      override: "{{ ironic_conf_overrides | default({}) }}"'  tests/roles/bootstrap-host/tasks/prepare_aio_config.yml""",
-                    **kwargs)
-                )
+            nextsteps.append(steps.PatchStep('ironic-aio-mitaka', **kwargs))
 
             nextsteps.append(
                 steps.FileAppendStep(
