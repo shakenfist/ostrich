@@ -554,7 +554,7 @@ def deploy(screen):
                 './helpers/openstack-details',
                 **r.kwargs)
         ])
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     if utils.is_ironic(r):
         net, hosts = expand_ironic_netblock(r)
@@ -566,7 +566,7 @@ def deploy(screen):
                     hosts[0], hosts[11], hosts[-11])
                  ),
                 **kwargs))
-        r.resolve_steps()
+        r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # Must be the last step
     r.kwargs['max_attempts'] = 1
