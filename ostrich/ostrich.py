@@ -550,7 +550,7 @@ def deploy(screen):
 
     if utils.is_ironic(r):
         net, hosts = expand_ironic_netblock(r)
-        kwargs['max_attempts'] = 1
+        r.kwargs['max_attempts'] = 1
         r.load_step(steps.SimpleCommandStep(
                 'setup-neutron-ironic',
                 ('./helpers/setup-neutron-ironic %s %s %s %s'
