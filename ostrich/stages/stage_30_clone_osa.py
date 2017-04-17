@@ -35,7 +35,7 @@ def get_steps(r):
                 'cwd': '/opt/openstack-ansible',
                 'env': {
                     'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
-                    # 'ANSIBLE_DEBUG': '1',
+                    'ANSIBLE_DEBUG': '1',
                     'ANSIBLE_KEEP_REMOTE_FILES': '1'
                 }
             },
