@@ -475,7 +475,10 @@ def deploy(screen):
 
     nextsteps = []
     playnames = [
-        'setup-hosts',
+        'openstack-hosts-setup.yml',
+        'security-hardening.yml',
+        'lxc-hosts-setup.yml',
+        'lxc-containers-create.yml',
         'setup-infrastructure',
         'os-keystone-install',
         'os-glance-install',
