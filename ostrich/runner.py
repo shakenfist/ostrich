@@ -31,6 +31,8 @@ class Runner(object):
         self.kwargs = {}
         self.tested = {}
 
+        self._on_error = None
+
         if os.path.exists(self._get_state_path()):
             with open(self._get_state_path(), 'r') as f:
                 state = json.loads(f.read())
@@ -63,6 +65,12 @@ class Runner(object):
             depend = step.name
             self.load_step(step)
 
+    def _ordered_step_names(self):
+        if self._on_error:
+            yield self._on_error
+        for key in sorted(self.steps.keys()):
+            yield key
+
     def resolve_steps(self, use_curses=True):
         if use_curses:
             # Setup curses windows for the steps view
@@ -91,7 +99,7 @@ class Runner(object):
             run = []
             complete = []
 
-            for step_name in self.steps:
+            for step_name in self._ordered_step_names():
                 step = self.steps[step_name]
 
                 runnable = False
@@ -117,10 +125,6 @@ class Runner(object):
                     outcome = step.run(emitter, self.screen)
                     self.counter += 1
 
-                    if outcome:
-                        self.complete[step_name] = outcome
-                        complete.append(step_name)
-
                     if self._get_state_path():
                         with open(self._get_state_path(), 'w') as f:
                             f.write(json.dumps({
@@ -130,6 +134,14 @@ class Runner(object):
                                         'tested': self.tested,
                                         },
                                                indent=4, sort_keys=True))
+
+                    if outcome:
+                        self._on_error = None
+                        self.complete[step_name] = outcome
+                        complete.append(step_name)
+                    elif step.on_failure:
+                        self._on_error = step.on_failure
+                        break
 
             for step_name in complete:
                 del self.steps[step_name]

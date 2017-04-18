@@ -46,6 +46,7 @@ class Step(object):
         self.attempts = 0
         self.max_attempts = kwargs.get('max_attempts', 5)
         self.failing_step_delay = kwargs.get('failing_step_delay', 300)
+        self.on_failure = kwargs.get('on_failure')
 
     def __str__(self):
         return 'step %s, depends on %s' % (self.name, self.depends)

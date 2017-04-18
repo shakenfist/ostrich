@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# For each interface in each container, ensure it is up. This is a work around
+# to some interfaces not coming up correctly during lxc container creation.
+
+for container in `lxc-ls`
+do
+  for interface in `ls /var/lib/lxc/$container/rootfs/etc/network/interfaces.d/`
+  do
+    interface=`echo $interface | sed 's/.cfg//'`
+
+    echo "Forcing $container, $interface up"
+    lxc-attach -n $container ifup $interface
+  done
+done

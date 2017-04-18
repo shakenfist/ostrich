@@ -16,6 +16,7 @@
 #
 
 import argparse
+import copy
 import curses
 import importlib
 import ipaddress
@@ -473,29 +474,40 @@ def deploy(screen):
     r.kwargs['max_attempts'] = 3
     r.kwargs['cwd'] = '/opt/openstack-ansible/playbooks'
 
+    error_kwargs = copy.deepcopy(kwargs)
+    error_kwargs['max_attempts'] = 1
+    error_kwargs['cwd'] = None
+
     nextsteps = []
     playnames = [
-        'openstack-hosts-setup',
-        'security-hardening',
-        'lxc-hosts-setup',
-        'lxc-containers-create',
-        'setup-infrastructure',
-        'os-keystone-install',
-        'os-glance-install',
-        'os-cinder-install',
-        'os-nova-install',
-        'os-neutron-install',
-        'os-heat-install',
-        'os-horizon-install',
-        'os-ceilometer-install',
-        'os-aodh-install',
-        'os-swift-install'
+        ('openstack-hosts-setup', None),
+        ('security-hardening', None),
+        ('lxc-hosts-setup', None),
+        ('lxc-containers-create',
+         steps.SimpleCommandStep(
+                'lxc-containers-create-on-error',
+                './helpers/lxc-ifup',
+                **error_kwargs
+                )
+         ),
+        ('setup-infrastructure', None),
+        ('os-keystone-install', None),
+        ('os-glance-install', None),
+        ('os-cinder-install', None),
+        ('os-nova-install', None),
+        ('os-neutron-install', None),
+        ('os-heat-install', None),
+        ('os-horizon-install', None),
+        ('os-ceilometer-install', None),
+        ('os-aodh-install', None),
+        ('os-swift-install', None)
     ]
 
     if utils.is_ironic(r):
         playnames.append('os-ironic-install')
 
-    for play in playnames:
+    for play, on_failure in playnames:
+        r.wkargs['on_failure'] = on_failure
         nextsteps.append(
             steps.AnsibleTimingSimpleCommandStep(
                 play,
@@ -507,6 +519,7 @@ def deploy(screen):
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     r.kwargs['cwd'] = None
+    r.kwargs['on_failure'] = None
 
     #####################################################################
     # Release specific steps: Mitaka
