@@ -573,7 +573,7 @@ def deploy(screen):
                  % (r.complete['ironic-ip-block'],
                     hosts[0], hosts[11], hosts[-11])
                  ),
-                **r..wargs))
+                **r.kwargs))
         r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # Must be the last step
