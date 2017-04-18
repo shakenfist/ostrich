@@ -504,7 +504,7 @@ def deploy(screen):
     ]
 
     if utils.is_ironic(r):
-        playnames.append('os-ironic-install')
+        playnames.append(('os-ironic-install', None))
 
     for play, on_failure in playnames:
         r.kwargs['on_failure'] = on_failure
