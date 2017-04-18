@@ -474,7 +474,7 @@ def deploy(screen):
     r.kwargs['max_attempts'] = 3
     r.kwargs['cwd'] = '/opt/openstack-ansible/playbooks'
 
-    error_kwargs = copy.deepcopy(kwargs)
+    error_kwargs = copy.deepcopy(r.kwargs)
     error_kwargs['max_attempts'] = 1
     error_kwargs['cwd'] = None
 
