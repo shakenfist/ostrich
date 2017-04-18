@@ -10,7 +10,7 @@ do
     interface=`echo $interface | sed 's/.cfg//'`
 
     echo "Forcing $container, $interface up"
-    lxc-attach -n $container ifup -v $interface
+    lxc-attach -n $container ifup $interface
     echo
   done
 done
