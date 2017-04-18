@@ -67,7 +67,8 @@ class Runner(object):
 
     def _ordered_step_names(self):
         if self._on_error:
-            yield self._on_error
+            self.steps[self._on_error.name] = self._on_error
+            yield self._on_error.name
         for key in sorted(self.steps.keys()):
             yield key
 
