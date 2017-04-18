@@ -507,7 +507,7 @@ def deploy(screen):
         playnames.append('os-ironic-install')
 
     for play, on_failure in playnames:
-        r.wkargs['on_failure'] = on_failure
+        r.kwargs['on_failure'] = on_failure
         nextsteps.append(
             steps.AnsibleTimingSimpleCommandStep(
                 play,
