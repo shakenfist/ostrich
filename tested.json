@@ -1,5 +1,6 @@
 {
-    "openstack-ansible": {
-        "stable/mitaka": "2652135578cc4a686bb93427674aa0c87f144a85"
-    }
+    "stable/mitaka": "1583f24043fd4e60635af9eee1de440c4a3977f8",
+    "stable/newton": "785e7431eccfafba8f388e4e8006e16082bfea85",
+    "stable/ocata":  "33831db40221226b742af467448fd0fb479bd3e8",
+    "master":        "9c16a2bab743a144c0af1d4c30ac14d042819942"
 }

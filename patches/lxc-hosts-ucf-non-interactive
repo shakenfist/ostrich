@@ -1,0 +1,11 @@
+--- /etc/ansible/roles/lxc_hosts/tasks/lxc_cache_preparation.yml	2017-04-13 16:00:25.203203000 +1000
++++ /etc/ansible/roles/lxc_hosts/tasks/lxc_cache_preparation.yml	2017-04-13 16:03:56.955203000 +1000
+@@ -86,6 +86,8 @@
+ # lxc_container_create playbook.
+ - name: Prepare cached image
+   command: "chroot {{ lxc_container_cache_path }}/{{ item[0].chroot_path }} {{ item[1] }}"
++  environment:
++    DEBIAN_FRONTEND: noninteractive
+   with_nested:
+     - lxc_container_caches
+     - lxc_cache_commands

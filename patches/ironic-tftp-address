@@ -1,0 +1,11 @@
+--- /etc/ansible/roles/os_ironic/defaults/main.yml	2017-04-14 08:26:18.029252242 +1000
++++ /etc/ansible/roles/os_ironic/defaults/main.yml	2017-04-14 08:26:13.389192928 +1000
+@@ -129,7 +129,7 @@
+ 
+ ironic_venv_download_url: http://127.0.0.1/venvs/untagged/ubuntu/ironic.tgz
+ 
+-ironic_tftp_server_address: "{{ ansible_ssh_host }}"
++ironic_tftp_server_address: "{{ container_networks['ironic_address']['address'] }}"
+ 
+ ironic_requires_pip_packages:
+   - virtualenv

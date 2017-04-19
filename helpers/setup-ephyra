@@ -1,0 +1,53 @@
+#!/bin/bash -ex
+
+# These tests only make sense in my lab, because you have to have my physical
+# machines with my local IPMI config. Oh, and ephyra isn't open source.
+
+http_proxy=""
+HTTP_PROXY=""
+https_proxy=""
+HTTPS_PROXY=""
+
+# Fetch CoreOS IPA images from our local cache
+wget http://192.168.50.1/tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe-stable-mitaka.vmlinuz -O ipa-coreos-mitaka.vmlinuz
+wget http://192.168.50.1/tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe_image-oem-stable-mitaka.cpio.gz -O ipa-coreos-mitaka.cpio.gz
+
+# Source openrc
+. ~/.ostrich/openrc
+
+# Shortcuts
+EPHYRA="ephyra -c ~/.ostrich/clouds.yaml -i ~/inventory.yaml -n ~/inventory.yaml"
+OS_CMD="/opt/openstack-ansible/scripts/os-cmd"
+
+# Bootstrap the deploy kernel
+$EPHYRA upload-image --filename ipa-coreos-mitaka.vmlinuz \
+    --name deploy-vmlinuz --disk-format aki --container-format aki \
+    envvars:RegionOne
+$EPHYRA upload-image --filename ipa-coreos-mitaka.cpio.gz \
+    --name deploy-initrd --disk-format ari --container-format ari \
+    envvars:RegionOne
+
+# Add a node to ironic
+$EPHYRA gather-nodes envvars:RegionOne
+
+# This needs to be done from the utility container because ephyra doesn't
+# set the CPU property yet
+$OS_CMD wget http://192.168.50.1/cirros/cirros-0.3.4-x86_64-disk.img \
+    -O /tmp/cirros.img
+$OS_CMD glance image-create --name cirros --visibility public \
+    --disk-format qcow2 --container-format bare --file /tmp/cirros.img \
+    --property hypervisor_type='baremetal' --property cpu_arch='x86_64'
+
+# Create flavors
+$OS_CMD nova flavor-create bm auto 16384 1022 2
+$OS_CMD nova flavor-key bm set cpu_arch=x86_64
+$OS_CMD ironic node-list
+$OS_CMD nova hypervisor-list
+
+# Check we have a hypervisor registered
+node=`sudo $OS_CMD ironic node-list | grep "available" | cut -f 2 -d " "`
+if [ `$OS_CMD nova hypervisor-list | grep -c $node` != 1 ]
+then
+    echo "Ironic node not registered as a hypervisor"
+    exit 1
+fi

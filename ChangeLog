@@ -1,6 +1,24 @@
 CHANGES
 =======
 
+* Fix bug for skipping caches for local servers
+* Revert "No, we definitely still need a non-interactive apt run"
+* No, we definitely still need a non-interactive apt run
+* DEBIAN_FRONTEND seems to be causing problems
+* No proxy for local cache
+* Break out run-playbooks into something more granular
+* Quote the hostvar
+* Fix silly typo
+* Remove unused variable
+* Try using the address from inventory
+* Fix syntax error
+* Move tftp / pxe config later in the build process
+* Cleanup sed a little
+* Add back missing expand_ironic_netblock
+* Ironic TFTP and PXE config tweaks
+* Add an ephyra helper
+* kwargs changes must be at the end of a stage
+* The runner now owns kwargs and logs them
 * Use central KWARGS
 * Handle recursive dictionary updates correctly
 * A second attempt at a working kwargs step
@@ -18,6 +36,9 @@ CHANGES
 * Mark ARGS as a global
 * Parameterize neutron network setup
 * Start rolling out a more formal structure
+* Record stable/mitaka sha
+* Record what versions of OSA we've tested
+* Parameterize neutron network setup
 * Fix proxy errors in verification steps
 * Don't code before coffee
 * Fix super() error

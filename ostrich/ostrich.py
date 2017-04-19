@@ -16,9 +16,11 @@
 #
 
 import argparse
+import copy
 import curses
 import importlib
 import ipaddress
+import json
 import os
 import sys
 import urlparse
@@ -32,20 +34,30 @@ import utils
 ARGS = None
 
 
+def expand_ironic_netblock(r):
+    net = ipaddress.ip_network(r.complete['ironic-ip-block'])
+    hosts = []
+    for h in net.hosts():
+        hosts.append(str(h))
+
+    return net, hosts
+
+
 def stage5_configure_osa_before_bootstrap(r, **kwargs):
     """Do all the configuration we do before bootstrapping."""
 
     nextsteps = []
 
     if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
-        kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
-                              'https_proxy': r.complete['http-proxy']})
-
-        # This entry will only last until it is clobbered by ansible
         local_servers = 'localhost,127.0.0.1'
         if r.complete['local-cache'] != 'none':
             local_servers += ',%s' % r.complete['local-cache']
 
+        kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
+                              'https_proxy': r.complete['http-proxy'],
+                              'no_proxy': local_servers})
+
+        # This entry will only last until it is clobbered by ansible
         nextsteps.append(
             steps.FileAppendStep(
                 'proxy-environment',
@@ -68,7 +80,6 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
          r.complete['git-mirror-github']),
         ('(http|https|git)://git.openstack.org',
          r.complete['git-mirror-openstack']),
-        ('apt-get', 'DEBIAN_FRONTEND=noninteractive apt-get')
         ]
 
     if r.complete['local-cache'] != 'none':
@@ -146,12 +157,7 @@ def stage5_configure_osa_before_bootstrap(r, **kwargs):
                 )
 
         if utils.is_ironic(r):
-            nextsteps.append(
-                steps.SimpleCommandStep(
-                    'fixup-add-ironic-mitaka',
-                    """sed -i -e '/swift_conf_overrides | default/ a \\    - name: ironic.yml.aio\\n      override: "{{ ironic_conf_overrides | default({}) }}"'  tests/roles/bootstrap-host/tasks/prepare_aio_config.yml""",
-                    **kwargs)
-                )
+            nextsteps.append(steps.PatchStep('ironic-aio-mitaka', **kwargs))
 
             nextsteps.append(
                 steps.FileAppendStep(
@@ -235,7 +241,7 @@ def stage7_user_variables(r, **kwargs):
                   '  NO_PROXY: "{{ no_proxy_env }}"\n'
                   '  no_proxy: "{{ no_proxy_env }}"')
                  % {'proxy': r.complete['http-proxy'],
-                    'local': 'local_servers'}),
+                    'local': local_servers}),
                 **kwargs)
             )
 
@@ -264,6 +270,8 @@ def stage7_user_variables(r, **kwargs):
             """sed -i -e '/- name: Update container resolvers/ i \\- name: Always keep modified config files\\n  template:\\n    src: apt-keep-configs.j2\\n    dest: "{{ lxc_container_cache_path }}/{{ item.chroot_path }}/etc/apt/apt.conf.d/00apt-keep-configs"\\n  with_items: lxc_container_caches\\n  tags:\\n    - lxc-cache\\n    - lxc-cache-update\\n\\n'  /etc/ansible/roles/lxc_hosts/tasks/lxc_cache_preparation.yml""",
             **kwargs)
         )
+
+    nextsteps.append(steps.PatchStep('lxc-hosts-ucf-non-interactive', **kwargs))
 
     # Release specific steps: Mitaka
     if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
@@ -391,7 +399,6 @@ def stage9_final_configuration(r, **kwargs):
         ('https://mirror.rackspace.com',
          'http://mirror.rackspace.com'),
         (' +checksum:.*', ''),
-        ('apt-get', 'DEBIAN_FRONTEND=noninteractive apt-get')
         ]
 
     if r.complete['local-cache'] != 'none':
@@ -421,6 +428,10 @@ def stage9_final_configuration(r, **kwargs):
                 '/etc/openstack_deploy/env.d/ironic.yml',
                 **kwargs)
             )
+
+    if utils.is_ironic(r):
+        nextsteps.append(steps.PatchStep('ironic-tftp-address', **kwargs))
+        nextsteps.append(steps.PatchStep('ironic-pxe-options', **kwargs))
 
     return nextsteps
 
@@ -460,16 +471,55 @@ def deploy(screen):
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # The last of the things, run only once
-    r.kwargs['max_attempts'] = 1
-    r.load_step(
-        steps.AnsibleTimingSimpleCommandStep(
-            'run-playbooks',
-            './scripts/run-playbooks.sh',
-            os.path.expanduser('~/.ostrich/run-playbook-timings.json'),
-            **r.kwargs))
+    r.kwargs['max_attempts'] = 3
+    r.kwargs['cwd'] = '/opt/openstack-ansible/playbooks'
+
+    error_kwargs = copy.deepcopy(r.kwargs)
+    error_kwargs['max_attempts'] = 1
+    error_kwargs['cwd'] = None
+
+    nextsteps = []
+    playnames = [
+        ('openstack-hosts-setup', None),
+        ('security-hardening', None),
+        ('lxc-hosts-setup', None),
+        ('lxc-containers-create',
+         steps.SimpleCommandStep(
+                'lxc-containers-create-on-error',
+                './helpers/lxc-ifup',
+                **error_kwargs
+                )
+         ),
+        ('setup-infrastructure', None),
+        ('os-keystone-install', None),
+        ('os-glance-install', None),
+        ('os-cinder-install', None),
+        ('os-nova-install', None),
+        ('os-neutron-install', None),
+        ('os-heat-install', None),
+        ('os-horizon-install', None),
+        ('os-ceilometer-install', None),
+        ('os-aodh-install', None),
+        ('os-swift-install', None)
+    ]
+
+    if utils.is_ironic(r):
+        playnames.append(('os-ironic-install', None))
+
+    for play, on_failure in playnames:
+        r.kwargs['on_failure'] = on_failure
+        nextsteps.append(
+            steps.AnsibleTimingSimpleCommandStep(
+                play,
+                'openstack-ansible -vvv %s.yml' % play,
+                os.path.expanduser('~/.ostrich/timings-%s.json' % play),
+                **r.kwargs)
+        )
+    r.load_dependancy_chain(nextsteps)
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     r.kwargs['cwd'] = None
+    r.kwargs['on_failure'] = None
 
     #####################################################################
     # Release specific steps: Mitaka
@@ -499,9 +549,6 @@ def deploy(screen):
          ])
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.kwargs['max_attempts'] = 3
-    r.kwargs['failing_step_delay'] = 150
-
     # Remove our HTTP proxy settings because the interfere with talking to
     # OpenStack
     r.kwargs['env']['http_proxy'] = ''
@@ -515,19 +562,19 @@ def deploy(screen):
                 './helpers/openstack-details',
                 **r.kwargs)
         ])
-    r.resolve_steps()
+    r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    if is_ironic(r):
+    if utils.is_ironic(r):
         net, hosts = expand_ironic_netblock(r)
-        kwargs['max_attempts'] = 1
+        r.kwargs['max_attempts'] = 1
         r.load_step(steps.SimpleCommandStep(
                 'setup-neutron-ironic',
                 ('./helpers/setup-neutron-ironic %s %s %s %s'
                  % (r.complete['ironic-ip-block'],
                     hosts[0], hosts[11], hosts[-11])
                  ),
-                **kwargs))
-        r.resolve_steps()
+                **r.kwargs))
+        r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # Must be the last step
     r.kwargs['max_attempts'] = 1

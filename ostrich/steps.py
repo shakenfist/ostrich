@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import fcntl
 import json
 import os
@@ -45,6 +46,7 @@ class Step(object):
         self.attempts = 0
         self.max_attempts = kwargs.get('max_attempts', 5)
         self.failing_step_delay = kwargs.get('failing_step_delay', 300)
+        self.on_failure = kwargs.get('on_failure')
 
     def __str__(self):
         return 'step %s, depends on %s' % (self.name, self.depends)
@@ -178,6 +180,17 @@ class AnsibleTimingSimpleCommandStep(SimpleCommandStep):
             f.write(json.dumps(self.timings, indent=4))
 
         return res
+
+
+class PatchStep(SimpleCommandStep):
+    def __init__(self, name, **kwargs):
+        local_kwargs = copy.copy(kwargs)
+        local_kwargs['cwd'] = __file__.replace('ostrich/steps.py', '')
+
+        super(PatchStep, self).__init__(
+            name,
+            'patch -d / -p 1 < patches/%s' % name,
+            **local_kwargs)
 
 
 class QuestionStep(Step):

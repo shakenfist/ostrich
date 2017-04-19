@@ -10,17 +10,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+
 from ostrich import steps
 
 
 def get_steps(r):
     """Checkout OSA."""
 
+    tested = {}
+    with open('tested.json') as f:
+        tested = json.loads(f.read())
+    r.tested = tested
+
     nextsteps = []
     nextsteps.append(
         steps.SimpleCommandStep(
             'git-checkout-osa',
-            'git checkout %s' % r.complete['osa-branch'],
+            'git checkout %s' % r.tested[r.complete['osa-branch']],
             **r.kwargs
             )
         )
