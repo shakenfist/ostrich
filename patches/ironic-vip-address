@@ -1,5 +1,5 @@
---- ironic.conf.j2.orig	2017-04-20 18:55:04.522680006 +1000
-+++ ironic.conf.j2	2017-04-20 21:47:37.769062998 +1000
+--- /etc/ansible/roles/os_ironic/templates/ironic.conf.j2	2017-04-20 18:55:04.522680006 +1000
++++ /etc/ansible/roles/os_ironic/templates/ironic.conf.j2	2017-04-20 21:47:37.769062998 +1000
 @@ -22,7 +22,7 @@
  [cisco_ucs]
  
