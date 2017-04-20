@@ -381,6 +381,7 @@ def stage8_ironic_networking(r, **kwargs):
             'ifconfig eth1 inet %s up' % hosts[3],
             **kwargs)
         )
+    nextsteps.append(steps.PatchStep('ironic-vip-address', **r.kwargs))
 
     return nextsteps
 
