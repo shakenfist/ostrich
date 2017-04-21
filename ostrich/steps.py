@@ -142,11 +142,13 @@ class SimpleCommandStep(Step):
                 del procs[pid]
 
         # One final read pass
-        readable, _, _ = select.select([obj.stderr, obj.stdout], [], [], 1)
-        for f in readable:
-            d = os.read(f.fileno(), 10000)
-            self._output_analysis(d)
-            emit.emit(d)
+        readable = [True]
+        while readable:
+            readable, _, _ = select.select([obj.stderr, obj.stdout], [], [], 1)
+            for f in readable:
+                d = os.read(f.fileno(), 10000)
+                self._output_analysis(d)
+                emit.emit(d)
 
         emit.emit('... process complete')
         returncode = obj.returncode
