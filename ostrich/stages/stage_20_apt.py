@@ -23,19 +23,19 @@ def get_steps(r):
             'apt-get update',
             **r.kwargs)
         )
-    #nextsteps.append(
-    #    steps.SimpleCommandStep(
-    #        'apt-upgrade',
-    #        'apt-get upgrade -y',
-    #        **r.kwargs)
-    #    )
-    #nextsteps.append(
-    #    steps.SimpleCommandStep(
-    #        'apt-dist-upgrade',
-    #        'apt-get dist-upgrade -y',
-    #        **r.kwargs
-    #        )
-    #    )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'apt-upgrade',
+            'apt-get upgrade -y',
+            **r.kwargs)
+        )
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'apt-dist-upgrade',
+            'apt-get dist-upgrade -y',
+            **r.kwargs
+            )
+        )
     nextsteps.append(
         steps.SimpleCommandStep(
             'apt-useful',
