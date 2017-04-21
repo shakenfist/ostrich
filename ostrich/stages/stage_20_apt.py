@@ -46,7 +46,7 @@ def get_steps(r):
     nextsteps.append(
         steps.SimpleCommandStep(
             'dpkg-versions',
-            'dpkg -l',
+            'dpkg -l > ~/.ostrich/dpkg-versions',
             **r.kwargs
             )
        )
