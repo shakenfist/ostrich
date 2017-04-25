@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Sleep for an arbitrarily long time to see if that helps.
+sleep 1800
+
 # For each interface in each container, ensure it is up. This is a work around
 # to some interfaces not coming up correctly during lxc container creation.
 

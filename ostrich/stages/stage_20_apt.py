@@ -42,5 +42,12 @@ def get_steps(r):
             'apt-get install -y screen ack-grep git expect lxc',
             **r.kwargs
             )
-        )
+        ),
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'dpkg-versions',
+            'dpkg -l > ~/.ostrich/dpkg-versions',
+            **r.kwargs
+            )
+       )
     return nextsteps

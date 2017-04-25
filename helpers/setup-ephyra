@@ -44,6 +44,10 @@ $OS_CMD nova flavor-key bm set cpu_arch=x86_64
 $OS_CMD ironic node-list
 $OS_CMD nova hypervisor-list
 
+# Wait for nova to notice the hypervisor
+echo "Waiting for nova to notice the new hypervisor"
+sleep 120
+
 # Check we have a hypervisor registered
 node=`sudo $OS_CMD ironic node-list | grep "available" | cut -f 2 -d " "`
 if [ `$OS_CMD nova hypervisor-list | grep -c $node` != 1 ]
@@ -51,3 +55,21 @@ then
     echo "Ironic node not registered as a hypervisor"
     exit 1
 fi
+
+# Boot an instance
+image=`$OS_CMD glance image-list | grep cirros | cut -f 2 -d " "`
+$OS_CMD nova boot --flavor bm --image $image foo
+
+# Watch the instance booting
+for i in `seq 10`
+do
+  $OS_CMD nova list
+  echo
+  $OS_CMD ironic node-list
+  echo
+  echo "-----"
+  echo
+  sleep 30
+done
+
+# Ironic conductor logs for the boot
