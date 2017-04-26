@@ -1,5 +1,7 @@
 #!/bin/bash -ex
 
+IPA_TARGET=coreos
+
 # These tests only make sense in my lab, because you have to have my physical
 # machines with my local IPMI config. Oh, and ephyra isn't open source.
 
@@ -12,6 +14,10 @@ HTTPS_PROXY=""
 wget http://192.168.50.1/tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe-stable-mitaka.vmlinuz -O ipa-coreos-mitaka.vmlinuz
 wget http://192.168.50.1/tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe_image-oem-stable-mitaka.cpio.gz -O ipa-coreos-mitaka.cpio.gz
 
+# Fetch buildroot IPA images from our local cache
+wget http://192.168.50.1/christophersmart.com/files/mikal/bzImage -O ipa-buildroot-mitaka.vmlinuz
+wget http://192.168.50.1/christophersmart.com/files/mikal/rootfs.cpio.xz -O ipa-buildroot-mitaka.cpio.gz
+
 # Source openrc
 . ~/.ostrich/openrc
 
@@ -19,11 +25,28 @@ wget http://192.168.50.1/tarballs.openstack.org/ironic-python-agent/coreos/files
 EPHYRA="ephyra -c ~/.ostrich/clouds.yaml -i ~/inventory.yaml -n ~/inventory.yaml"
 OS_CMD="/opt/openstack-ansible/scripts/os-cmd"
 
+# Return us to a clean state
+for name in deploy-initrd deploy-vmlinuz cirros
+do
+    for image in `$OS_CMD glance image-list | grep $name | cut -f 2 -d " "`
+    do
+        $OS_CMD glance image-delete $image
+    done
+done
+
+for instance in `$OS_CMD nova list | grep foo | cut -f 2 -d " "`
+do
+  $OS_CMD nova delete $instance
+done
+
+$OS_CMD ironic node-delete lab4 || true
+$OS_CMD nova flavor-delete bm || true
+
 # Bootstrap the deploy kernel
-$EPHYRA upload-image --filename ipa-coreos-mitaka.vmlinuz \
+$EPHYRA upload-image --filename ipa-$IPA_TARGET-mitaka.vmlinuz \
     --name deploy-vmlinuz --disk-format aki --container-format aki \
     envvars:RegionOne
-$EPHYRA upload-image --filename ipa-coreos-mitaka.cpio.gz \
+$EPHYRA upload-image --filename ipa-$IPA_TARGET-mitaka.cpio.gz \
     --name deploy-initrd --disk-format ari --container-format ari \
     envvars:RegionOne
 
