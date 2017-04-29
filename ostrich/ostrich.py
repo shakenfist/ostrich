@@ -437,7 +437,12 @@ def stage9_final_configuration(r, **kwargs):
 
     if utils.is_ironic(r):
         nextsteps.append(steps.PatchStep('ironic-tftp-address', **kwargs))
-        nextsteps.append(steps.PatchStep('ironic-pxe-options', **kwargs))
+
+        if r.complete['osa-branch'] == 'stable/mitaka':
+            nextsteps.append(steps.PatchStep('ironic-pxe-options', **kwargs))
+        else:
+            nextsteps.append(steps.PatchStep('ironic-pxe-options-newton',
+                                             **kwargs))
 
     return nextsteps
 
