@@ -293,13 +293,6 @@ def deploy(screen):
         r.load_dependancy_chain(module.get_steps(r))
         r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.load_dependancy_chain(stage5_configure_osa_before_bootstrap(
-            r, **r.kwargs))
-    r.resolve_steps(use_curses=(not ARGS.no_curses))
-
-    r.load_dependancy_chain(stage6_bootstrap(r, **r.kwargs))
-    r.resolve_steps(use_curses=(not ARGS.no_curses))
-
     r.load_dependancy_chain(stage7_user_variables(r, **r.kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
@@ -310,7 +303,7 @@ def deploy(screen):
     r.load_dependancy_chain(stage9_final_configuration(r, **r.kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    # The last of the things, run only once
+    # The last of the things
     r.kwargs['max_attempts'] = 3
     r.kwargs['cwd'] = '/opt/openstack-ansible/playbooks'
 
