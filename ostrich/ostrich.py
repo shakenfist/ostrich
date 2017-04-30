@@ -351,12 +351,12 @@ def deploy(screen):
 
     nextsteps.append(
         steps.KwargsStep(
-            'ansible-environment',
+            'kwargs-ansible-environment',
             r,
             {
                 'env': variables
             },
-            *r.kwargs
+            **r.kwargs
             )
         )
     r.load_dependancy_chain(nextsteps)
