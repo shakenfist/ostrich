@@ -350,7 +350,7 @@ def deploy(screen):
                 variables[m.group(1)] = m.group(2)
 
     nextsteps.append(
-        steps.KwargStep(
+        steps.KwargsStep(
             'ansible-environment',
             r,
             {
