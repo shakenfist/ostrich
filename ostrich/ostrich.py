@@ -302,6 +302,7 @@ def deploy(screen):
 
     r.load_dependancy_chain(stage9_final_configuration(r, **r.kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
+        )
 
     # The last of the things
     r.kwargs['max_attempts'] = 3
@@ -312,8 +313,32 @@ def deploy(screen):
     error_kwargs['cwd'] = None
 
     nextsteps = []
+
+    # Working out where /etc/environment is setup
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'environment-before',
+            'cat /etc/environment',
+            **r.kwargs)
+        )
+    
+    nextsteps.append(
+        steps.AnsibleTimingSimpleCommandStep(
+            play,
+            'openstack-ansible -vvv %s.yml' % play,
+            os.path.expanduser('~/.ostrich/timings-%s.json' % play),
+            **r.kwargs)
+        )
+
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'environment-after',
+            'cat /etc/environment',
+            **r.kwargs)
+        )
+
     playnames = [
-        ('openstack-hosts-setup', None),
+        #('openstack-hosts-setup', None),
         ('security-hardening', None),
         ('lxc-hosts-setup', None),
         ('lxc-containers-create',
