@@ -26,6 +26,7 @@ class StageImportsTestCase(base.BaseTestCase):
 
     def test_stage_importability(self):
         r = test_utils.QuestionsAnsweredRunner(None)
+        r.kwargs['env'] = {}
         self.assertNotEqual(0, len(r.complete))
 
         for stage_pyname in stage_loader.discover_stages():

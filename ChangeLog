@@ -1,6 +1,13 @@
 CHANGES
 =======
 
+* Move OSA configuration to new style stages
+* Now sure where this patch came from, this is the newton version
+* 300 seconds is too long for a default retry delay
+* Newton style PXE append params
+* Bump shas
+* Cleanup failed merge in tested.json
+* Newton style non-interactive debian frontends
 * Bump mitaka sha
 * Improvements to the ephyra helper
 * Remove arbitrary long sleep
