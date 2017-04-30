@@ -41,27 +41,6 @@ def expand_ironic_netblock(r):
     return net, hosts
 
 
-def stage6_bootstrap(r, **kwargs):
-    """Bootstrap ansible and AIO."""
-
-    nextsteps = []
-
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'bootstrap-ansible',
-            './scripts/bootstrap-ansible.sh',
-            **kwargs)
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'bootstrap-aio',
-            './scripts/bootstrap-aio.sh',
-            **kwargs)
-        )
-
-    return nextsteps
-
-
 def stage7_user_variables(r, **kwargs):
     """Configure user variables with all our special things."""
 

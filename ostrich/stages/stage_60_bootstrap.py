@@ -14,42 +14,21 @@ from ostrich import steps
 
 
 def get_steps(r):
-    """Prepare apt."""
+    """Bootstrap ansible and AIO."""
 
     nextsteps = []
 
     nextsteps.append(
         steps.SimpleCommandStep(
-            'apt-update',
-            'apt-get update',
+            'bootstrap-ansible',
+            './scripts/bootstrap-ansible.sh',
             **r.kwargs)
         )
     nextsteps.append(
         steps.SimpleCommandStep(
-            'apt-upgrade',
-            'apt-get upgrade -y',
+            'bootstrap-aio',
+            './scripts/bootstrap-aio.sh',
             **r.kwargs)
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'apt-dist-upgrade',
-            'apt-get dist-upgrade -y',
-            **r.kwargs
-            )
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'apt-useful',
-            'apt-get install -y screen ack-grep git expect lxc',
-            **r.kwargs
-            )
-        ),
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'dpkg-versions',
-            'dpkg -l > ~/.ostrich/dpkg-versions',
-            **r.kwargs
-            )
         )
 
     return nextsteps

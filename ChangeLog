@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Move bootstrapping to a new style stage
 * Move OSA configuration to new style stages
 * Now sure where this patch came from, this is the newton version
 * 300 seconds is too long for a default retry delay

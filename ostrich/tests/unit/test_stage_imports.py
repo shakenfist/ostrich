@@ -12,7 +12,6 @@
 
 
 import importlib
-import os
 
 from oslotest import base
 from ostrich import stage_loader
