@@ -325,7 +325,7 @@ def deploy(screen):
         steps.AnsibleTimingSimpleCommandStep(
             'openstack-hosts-setup',
             'openstack-ansible -vvv openstack-hosts-setup.yml',
-            os.path.expanduser('~/.ostrich/timings-openstack-hosts-setup.json),
+            os.path.expanduser('~/.ostrich/timings-openstack-hosts-setup.json'),
             **r.kwargs)
         )
 

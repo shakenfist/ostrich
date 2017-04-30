@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+* Fix play name
+* Add missing return
+* Fix bracket typo
+* Quick hack to determine where /etc/environment is setup
+* Remove old style stage calls
 * Move bootstrapping to a new style stage
 * Move OSA configuration to new style stages
 * Now sure where this patch came from, this is the newton version
