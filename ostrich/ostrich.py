@@ -302,7 +302,6 @@ def deploy(screen):
 
     r.load_dependancy_chain(stage9_final_configuration(r, **r.kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
-        )
 
     # The last of the things
     r.kwargs['max_attempts'] = 3
