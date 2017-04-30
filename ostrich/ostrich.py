@@ -21,6 +21,7 @@ import curses
 import importlib
 import ipaddress
 import os
+import re
 import sys
 
 import runner
