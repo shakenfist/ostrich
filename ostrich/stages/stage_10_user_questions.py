@@ -64,7 +64,9 @@ def get_steps(r):
              'images. If you have a slow network, or are on a '
              'corporate network which requires a proxy, configure it '
              'here with a URL like http://cache.example.com:3128 . '
-             'If you do not use a proxy, please enter "none" here.'),
+             'If you do not use a proxy, please enter "none" here. '
+             'Please note this proxy is only used for mitaka installs, '
+             'as OSA added an in-built proxy in newton.'),
             'HTTP Proxy',
             **r.kwargs
             )

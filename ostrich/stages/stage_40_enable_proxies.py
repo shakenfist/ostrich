@@ -18,32 +18,33 @@ def get_steps(r):
 
     nextsteps = []
 
-    if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
-        local_servers = 'localhost,127.0.0.1'
-        if r.complete['local-cache'] != 'none':
-            local_servers += ',%s' % r.complete['local-cache']
+    if r.complete['osa-branch'] == 'stable/mitaka':
+        if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
+            local_servers = 'localhost,127.0.0.1'
+            if r.complete['local-cache'] != 'none':
+                local_servers += ',%s' % r.complete['local-cache']
 
-        r.kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
-                                'https_proxy': r.complete['http-proxy'],
-                                'no_proxy': local_servers})
+            r.kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
+                                    'https_proxy': r.complete['http-proxy'],
+                                    'no_proxy': local_servers})
 
-        # This entry will only last until it is clobbered by ansible
-        nextsteps.append(
-            steps.FileAppendStep(
-                'proxy-environment',
-                '/etc/environment',
-                (('\n\nexport http_proxy="%(proxy)s"\n'
-                  'export HTTP_PROXY="%(proxy)s"\n'
-                  'export https_proxy="%(proxy)s"\n'
-                  'export HTTPS_PROXY="%(proxy)s"\n'
-                  'export ftp_proxy="%(proxy)s"\n'
-                  'export FTP_PROXY="%(proxy)s"\n'
-                  'export no_proxy=%(local)s\n'
-                  'export NO_PROXY=%(local)sn')
-                 % {'proxy': r.complete['http-proxy'],
-                    'local': local_servers}),
-                **r.kwargs)
-            )
+            # This entry will only last until it is clobbered by ansible
+            nextsteps.append(
+                steps.FileAppendStep(
+                    'proxy-environment',
+                    '/etc/environment',
+                    (('\n\nexport http_proxy="%(proxy)s"\n'
+                      'export HTTP_PROXY="%(proxy)s"\n'
+                      'export https_proxy="%(proxy)s"\n'
+                      'export HTTPS_PROXY="%(proxy)s"\n'
+                      'export ftp_proxy="%(proxy)s"\n'
+                      'export FTP_PROXY="%(proxy)s"\n'
+                      'export no_proxy=%(local)s\n'
+                      'export NO_PROXY=%(local)sn')
+                     % {'proxy': r.complete['http-proxy'],
+                        'local': local_servers}),
+                    **r.kwargs)
+                )
 
     replacements = [
         ('(http|https|git)://github.com',

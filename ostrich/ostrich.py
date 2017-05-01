@@ -53,27 +53,28 @@ def stage7_user_variables(r, **kwargs):
         if r.complete['local-cache'] != 'none':
             local_servers += ',%s' % r.complete['local-cache']
 
-        nextsteps.append(
-            steps.FileAppendStep(
-                'proxy-environment-via-ansible',
-                '/etc/openstack_deploy/user_variables.yml',
-                (('\n\n'
-                  'no_proxy_env: "%(local)s,{{ '
-                  'internal_lb_vip_address }},{{ external_lb_vip_address }},'
-                  '{%% for host in groups[\'all_containers\'] %%}'
-                  '{{ hostvars[host][\'container_address\'] }}'
-                  '{%% if not loop.last %%},{%% endif %%}{%% endfor %%}"\n'
-                  'global_environment_variables:\n'
-                  '  HTTPS_PROXY: "%(proxy)s"\n'
-                  '  https_proxy: "%(proxy)s"\n'
-                  '  HTTP_PROXY: "%(proxy)s"\n'
-                  '  http_proxy: "%(proxy)s"\n'
-                  '  NO_PROXY: "{{ no_proxy_env }}"\n'
-                  '  no_proxy: "{{ no_proxy_env }}"')
-                 % {'proxy': r.complete['http-proxy'],
-                    'local': local_servers}),
-                **kwargs)
-            )
+        if r.complete['osa-branch'] == 'stable/mitaka':
+            nextsteps.append(
+                steps.FileAppendStep(
+                    'proxy-environment-via-ansible',
+                    '/etc/openstack_deploy/user_variables.yml',
+                    (('\n\n'
+                      'no_proxy_env: "%(local)s,{{ '
+                      'internal_lb_vip_address }},{{ external_lb_vip_address }},'
+                      '{%% for host in groups[\'all_containers\'] %%}'
+                      '{{ hostvars[host][\'container_address\'] }}'
+                      '{%% if not loop.last %%},{%% endif %%}{%% endfor %%}"\n'
+                      'global_environment_variables:\n'
+                      '  HTTPS_PROXY: "%(proxy)s"\n'
+                      '  https_proxy: "%(proxy)s"\n'
+                      '  HTTP_PROXY: "%(proxy)s"\n'
+                      '  http_proxy: "%(proxy)s"\n'
+                      '  NO_PROXY: "{{ no_proxy_env }}"\n'
+                      '  no_proxy: "{{ no_proxy_env }}"')
+                     % {'proxy': r.complete['http-proxy'],
+                        'local': local_servers}),
+                    **kwargs)
+                )
 
     nextsteps.append(
         steps.FileAppendStep(
@@ -313,58 +314,8 @@ def deploy(screen):
     error_kwargs['cwd'] = None
 
     nextsteps = []
-
-    # Copy /etc/environment into our runtime so that we can exclude the
-    # various containers from proxies.
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'environment-before',
-            'cat /etc/environment',
-            **r.kwargs)
-        )
-    
-    nextsteps.append(
-        steps.AnsibleTimingSimpleCommandStep(
-            'openstack-hosts-setup',
-            'openstack-ansible -vvv openstack-hosts-setup.yml',
-            os.path.expanduser('~/.ostrich/timings-openstack-hosts-setup.json'),
-            **r.kwargs)
-        )
-
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'environment-after',
-            'cat /etc/environment',
-            **r.kwargs)
-        )
-    r.load_dependancy_chain(nextsteps)
-    r.resolve_steps(use_curses=(not ARGS.no_curses))
-
-    nextsteps = []
-    variables = {}
-    variable_re = re.compile('(.*)=(.*)')
-    with open('/etc/environment', 'r') as f:
-        for line in f.readlines():
-            m = variable_re.match(line)
-            if m:
-                variables[m.group(1)] = m.group(2)
-
-    nextsteps.append(
-        steps.KwargsStep(
-            'kwargs-ansible-environment',
-            r,
-            {
-                'env': variables
-            },
-            **r.kwargs
-            )
-        )
-    r.load_dependancy_chain(nextsteps)
-    r.resolve_steps(use_curses=(not ARGS.no_curses))
-
-    # Run everything else
-    nextsteps = []
     playnames = [
+        ('openstack-hsots-setup', None),
         ('security-hardening', None),
         ('lxc-hosts-setup', None),
         ('lxc-containers-create',

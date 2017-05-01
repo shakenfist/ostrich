@@ -21,46 +21,32 @@ def get_steps(r):
 
     nextsteps = []
 
-    #########################################################################
-    # Release specific steps: Mitaka
-    if r.complete['osa-branch'] == 'stable/mitaka':
-        p = urlparse.urlparse(r.complete['git-mirror-github'])
-        mirror_host_github = p.netloc.split(':')[0]
-        p = urlparse.urlparse(r.complete['git-mirror-openstack'])
-        mirror_host_openstack = p.netloc.split(':')[0]
+    p = urlparse.urlparse(r.complete['git-mirror-github'])
+    mirror_host_github = p.netloc.split(':')[0]
+    p = urlparse.urlparse(r.complete['git-mirror-openstack'])
+    mirror_host_openstack = p.netloc.split(':')[0]
 
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'git-mirror-host-keys',
+            ('ssh-keyscan -H %s >> /etc/ssh/ssh_known_hosts'
+             % mirror_host_openstack),
+            **r.kwargs)
+        )
+
+    if mirror_host_github != mirror_host_openstack:
         nextsteps.append(
             steps.SimpleCommandStep(
-                'git-mirror-host-keys',
+                'git-mirror-host-keys-github',
                 ('ssh-keyscan -H %s >> /etc/ssh/ssh_known_hosts'
-                 % mirror_host_openstack),
+                 % mirror_host_github),
                 **r.kwargs)
             )
 
-        if mirror_host_github != mirror_host_openstack:
-            nextsteps.append(
-                steps.SimpleCommandStep(
-                    'git-mirror-host-keys-github',
-                    ('ssh-keyscan -H %s >> /etc/ssh/ssh_known_hosts'
-                     % mirror_host_github),
-                    **r.kwargs)
-                )
-
-        if utils.is_ironic(r):
+    if utils.is_ironic(r):
+        if r.complete['osa-branch'] == 'stable/mitaka':
             nextsteps.append(steps.PatchStep('ironic-aio-mitaka', **r.kwargs))
-
-            nextsteps.append(
-                steps.FileAppendStep(
-                    'group-vars-ironic_service_user_name',
-                    'playbooks/inventory/group_vars/all.yml',
-                    '\n\nironic_service_user_name: ironic',
-                    **r.kwargs)
-                )
-
-    #########################################################################
-    # Release specific steps: Newton
-    elif r.complete['osa-branch'] == 'stable/newton':
-        if utils.is_ironic(r):
+        else:
             nextsteps.append(
                 steps.SimpleCommandStep(
                     'fixup-add-ironic-newton',
@@ -69,6 +55,15 @@ def get_steps(r):
                     **r.kwargs)
                 )
 
+        nextsteps.append(
+            steps.FileAppendStep(
+                'group-vars-ironic_service_user_name',
+                'playbooks/inventory/group_vars/all.yml',
+                '\n\nironic_service_user_name: ironic',
+                **r.kwargs)
+            )
+
+    if r.complete['osa-branch'] != 'stable/mitaka':
         nextsteps.append(
             steps.RegexpEditorStep(
                 'ansible-no-loopback-swap',
@@ -79,7 +74,6 @@ def get_steps(r):
                 **r.kwargs)
             )
 
-    #########################################################################
     nextsteps.append(
         steps.RegexpEditorStep(
             'lxc-cachable-downloads',
