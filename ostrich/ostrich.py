@@ -315,7 +315,7 @@ def deploy(screen):
 
     nextsteps = []
     playnames = [
-        ('openstack-hsots-setup', None),
+        ('openstack-hosts-setup', None),
         ('security-hardening', None),
         ('lxc-hosts-setup', None),
         ('lxc-containers-create',
