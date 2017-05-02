@@ -394,7 +394,7 @@ def deploy(screen):
     r.load_dependancy_chain(
         [steps.SimpleCommandStep(
                 'openstack-details',
-                './helpers/openstack-details',
+                './helpers/openstack-details %s' % r.complete['osa-branch'],
                 **r.kwargs)
         ])
     r.resolve_steps(use_curses=(not ARGS.no_curses))
