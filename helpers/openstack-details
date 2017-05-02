@@ -61,7 +61,7 @@ echo "============================================================="
 echo "baremetal node list"
 echo "============================================================="
 set -x
-timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack baremetal node list
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack --insecure baremetal node list
 echo "Exit code: $?"
 set +x
 echo
