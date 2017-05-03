@@ -194,7 +194,7 @@ class PatchStep(SimpleCommandStep):
                                'patches/%s' % name)) as f:
             for line in f.readlines():
                 if line.startswith('--- '):
-                     self.files.append(line.split(' ')[1])
+                     self.files.append(line.split()[1])
 
         super(PatchStep, self).__init__(
             name,
