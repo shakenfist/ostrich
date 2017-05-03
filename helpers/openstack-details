@@ -67,11 +67,13 @@ set -x
 if [ "$1" != "stable/mitaka" ]
 then
   SSLOPTS="--insecure"
+  CMD="node list"
 else
   SSLOPTS=""
+  CMD="list"
 fi
 
-timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack $SSLOPTS baremetal node list
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack $SSLOPTS baremetal $CMD
 echo "Exit code: $?"
 set +x
 echo
