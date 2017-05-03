@@ -184,13 +184,36 @@ class AnsibleTimingSimpleCommandStep(SimpleCommandStep):
 
 class PatchStep(SimpleCommandStep):
     def __init__(self, name, **kwargs):
-        local_kwargs = copy.copy(kwargs)
-        local_kwargs['cwd'] = __file__.replace('ostrich/steps.py', '')
+        self.local_kwargs = copy.copy(kwargs)
+        self.local_kwargs['cwd'] = __file__.replace('ostrich/steps.py', '')
+
+        self.archive_path = os.path.expanduser('~/.ostrich')
+
+        self.files = []
+        with open(os.path.join(self.local_kwargs['cwd'],
+                               'patches/%s' % name)) as f:
+            for line in f.readlines():
+                if line.startswith('--- '):
+                     self.files.append(line.split(' ')[1])
 
         super(PatchStep, self).__init__(
             name,
             'patch -d / -p 1 < patches/%s' % name,
-            **local_kwargs)
+            **self.local_kwargs)
+
+    def _archive_files(self, stage):
+        for f in self.files:
+            arc_path = os.path.join(self.archive_path,
+                                    '%s-%s-%s'
+                                    % (self.name, f.replace('/', '_'), stage))
+            if not os.path.exists(arc_path):
+                shutil.copyfile(f, arc_path)
+
+    def _run(self, emit, screen):
+        self._archive_files('before')
+        res = super(PatchStep, self)._run(emit, screen)
+        self._archive_files('after')
+        return res
 
 
 class QuestionStep(Step):

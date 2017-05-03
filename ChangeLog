@@ -1,6 +1,16 @@
 CHANGES
 =======
 
+* Tweak SSL options to baremetal based on release
+* Make baremetal node listing insecure
+* Handle deprecated command
+* Fix play name typo
+* Use newton's inbuilt proxy
+* Fix missing asterisk
+* Fix step name typo
+* Add missng import
+* Copy ansible proxy settings once they're known
+* Fix silly typo
 * Fix play name
 * Add missing return
 * Fix bracket typo
