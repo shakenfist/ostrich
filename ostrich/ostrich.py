@@ -105,9 +105,12 @@ def stage7_user_variables(r, **kwargs):
     if r.complete['osa-branch'] == 'stable/mitaka':
         nextsteps.append(steps.PatchStep(
             'lxc-hosts-ucf-non-interactive', **kwargs))
-    else:
+    elif r.complete['osa-branch'] == 'stable/newton':
         nextsteps.append(steps.PatchStep(
             'lxc-hosts-ucf-non-interactive-newton', **kwargs))
+    else:
+        nextsteps.append(steps.PatchStep(
+            'lxc-hosts-ucf-non-interactive-ocata', **kwargs))
 
     # Release specific steps: Mitaka
     if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):

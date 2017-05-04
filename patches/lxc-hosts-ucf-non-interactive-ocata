@@ -1,0 +1,11 @@
+--- /etc/ansible/roles/lxc_hosts/tasks/lxc_install_apt.yml	2017-05-04 11:10:23.906574962 +1000
++++ /etc/ansible/roles/lxc_hosts/tasks/lxc_install_apt.yml	2017-05-04 11:11:15.999257909 +1000
+@@ -24,6 +24,8 @@
+   until: install_packages|success
+   retries: 5
+   delay: 2
++  environment:
++    DEBIAN_FRONTEND: noninteractive
+   with_items: "{{ lxc_hosts_distro_packages }}"
+   tags:
+     - lxc-apt-packages
