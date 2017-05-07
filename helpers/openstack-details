@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+# $1: OSA branch (stable/mitaka, etc)
+
 utility_container=`lxc-ls | grep utility`
 
 echo "============================================================="
@@ -61,7 +63,17 @@ echo "============================================================="
 echo "baremetal node list"
 echo "============================================================="
 set -x
-timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack baremetal list
+
+if [ "$1" != "stable/mitaka" ]
+then
+  SSLOPTS="--insecure"
+  CMD="node list"
+else
+  SSLOPTS=""
+  CMD="list"
+fi
+
+timeout 30 /opt/openstack-ansible/scripts/os-cmd openstack $SSLOPTS baremetal $CMD
 echo "Exit code: $?"
 set +x
 echo

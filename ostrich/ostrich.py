@@ -20,10 +20,9 @@ import copy
 import curses
 import importlib
 import ipaddress
-import json
 import os
+import re
 import sys
-import urlparse
 
 import runner
 import stage_loader
@@ -43,175 +42,6 @@ def expand_ironic_netblock(r):
     return net, hosts
 
 
-def stage5_configure_osa_before_bootstrap(r, **kwargs):
-    """Do all the configuration we do before bootstrapping."""
-
-    nextsteps = []
-
-    if r.complete['http-proxy'] and r.complete['http-proxy'] != 'none':
-        local_servers = 'localhost,127.0.0.1'
-        if r.complete['local-cache'] != 'none':
-            local_servers += ',%s' % r.complete['local-cache']
-
-        kwargs['env'].update({'http_proxy': r.complete['http-proxy'],
-                              'https_proxy': r.complete['http-proxy'],
-                              'no_proxy': local_servers})
-
-        # This entry will only last until it is clobbered by ansible
-        nextsteps.append(
-            steps.FileAppendStep(
-                'proxy-environment',
-                '/etc/environment',
-                (('\n\nexport http_proxy="%(proxy)s"\n'
-                  'export HTTP_PROXY="%(proxy)s"\n'
-                  'export https_proxy="%(proxy)s"\n'
-                  'export HTTPS_PROXY="%(proxy)s"\n'
-                  'export ftp_proxy="%(proxy)s"\n'
-                  'export FTP_PROXY="%(proxy)s"\n'
-                  'export no_proxy=%(local)s\n'
-                  'export NO_PROXY=%(local)sn')
-                 % {'proxy': r.complete['http-proxy'],
-                    'local': local_servers}),
-                **kwargs)
-            )
-
-    replacements = [
-        ('(http|https|git)://github.com',
-         r.complete['git-mirror-github']),
-        ('(http|https|git)://git.openstack.org',
-         r.complete['git-mirror-openstack']),
-        ]
-
-    if r.complete['local-cache'] != 'none':
-        replacements.append(
-            ('https://rpc-repo.rackspace.com',
-             'http://%s/rpc-repo.rackspace.com' % r.complete['local-cache'])
-            )
-
-    nextsteps.append(
-        steps.BulkRegexpEditorStep(
-            'bulk-edit-osa',
-            '/opt/openstack-ansible',
-            '.*\.(ini|yml|sh)$',
-            replacements,
-            **kwargs)
-        )
-
-    nextsteps.append(
-        steps.BulkRegexpEditorStep(
-            'unapply-git-mirrors-for-cgit',
-            '/opt/openstack-ansible',
-            '.*\.(ini|yml|sh)$',
-            [
-                ('%s/cgit' % r.complete['git-mirror-openstack'],
-                 'https://git.openstack.org/cgit')
-            ],
-            **kwargs)
-        )
-
-    #########################################################################
-    # Release specific steps: Newton
-    if r.complete['osa-branch'] == 'stable/newton':
-        if utils.is_ironic(r):
-            nextsteps.append(
-                steps.SimpleCommandStep(
-                    'fixup-add-ironic-newton',
-                    ('sed -i -e "/- name: heat.yml.aio/ a \        '
-                     '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
-                    **kwargs)
-                )
-
-        nextsteps.append(
-            steps.RegexpEditorStep(
-                'ansible-no-loopback-swap',
-                ('/opt/openstack-ansible/tests/roles/bootstrap-host/'
-                 'tasks/prepare_loopback_swap.yml'),
-                'command: grep /openstack/swap.img /proc/swaps',
-                'command: /bin/true',
-                **kwargs)
-            )
-
-    #########################################################################
-    # Release specific steps: Mitaka
-    elif r.complete['osa-branch'] == 'stable/mitaka':
-        p = urlparse.urlparse(r.complete['git-mirror-github'])
-        mirror_host_github = p.netloc.split(':')[0]
-        p = urlparse.urlparse(r.complete['git-mirror-openstack'])
-        mirror_host_openstack = p.netloc.split(':')[0]
-
-        nextsteps.append(
-            steps.SimpleCommandStep(
-                'git-mirror-host-keys',
-                ('ssh-keyscan -H %s >> /etc/ssh/ssh_known_hosts'
-                 % mirror_host_openstack),
-                **kwargs)
-            )
-
-        if mirror_host_github != mirror_host_openstack:
-            nextsteps.append(
-                steps.SimpleCommandStep(
-                    'git-mirror-host-keys-github',
-                    ('ssh-keyscan -H %s >> /etc/ssh/ssh_known_hosts'
-                     % mirror_host_github),
-                    **kwargs)
-                )
-
-        if utils.is_ironic(r):
-            nextsteps.append(steps.PatchStep('ironic-aio-mitaka', **kwargs))
-
-            nextsteps.append(
-                steps.FileAppendStep(
-                    'group-vars-ironic_service_user_name',
-                    'playbooks/inventory/group_vars/all.yml',
-                    '\n\nironic_service_user_name: ironic',
-                    **kwargs)
-                )
-
-    #########################################################################
-    nextsteps.append(
-        steps.RegexpEditorStep(
-            'lxc-cachable-downloads',
-            '/usr/share/lxc/templates/lxc-download',
-            'wget_wrapper -T 30 -q https?://',
-            'wget_wrapper -T 30 -q --no-hsts http://',
-            **kwargs)
-        )
-
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'archive-upper-constraints',
-            ('curl https://git.openstack.org/cgit/openstack/requirements/'
-             'plain/upper-constraints.txt?id='
-             '$(awk \'/requirements_git_install_branch:/ {print $2}\' '
-             '/opt/openstack-ansible/playbooks/defaults/repo_packages/'
-             'openstack_services.yml) -o ~/.ostrich/upper-contraints.txt'),
-            **kwargs)
-        )
-
-    return nextsteps
-
-
-def stage6_bootstrap(r, **kwargs):
-    """Bootstrap ansible and AIO."""
-
-    nextsteps = []
-
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'bootstrap-ansible',
-            './scripts/bootstrap-ansible.sh',
-            **kwargs)
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'bootstrap-aio',
-            './scripts/bootstrap-aio.sh',
-            **kwargs)
-        )
-
-    return nextsteps
-
-
 def stage7_user_variables(r, **kwargs):
     """Configure user variables with all our special things."""
 
@@ -223,27 +53,28 @@ def stage7_user_variables(r, **kwargs):
         if r.complete['local-cache'] != 'none':
             local_servers += ',%s' % r.complete['local-cache']
 
-        nextsteps.append(
-            steps.FileAppendStep(
-                'proxy-environment-via-ansible',
-                '/etc/openstack_deploy/user_variables.yml',
-                (('\n\n'
-                  'no_proxy_env: "%(local)s,{{ '
-                  'internal_lb_vip_address }},{{ external_lb_vip_address }},'
-                  '{%% for host in groups[\'all_containers\'] %%}'
-                  '{{ hostvars[host][\'container_address\'] }}'
-                  '{%% if not loop.last %%},{%% endif %%}{%% endfor %%}"\n'
-                  'global_environment_variables:\n'
-                  '  HTTPS_PROXY: "%(proxy)s"\n'
-                  '  https_proxy: "%(proxy)s"\n'
-                  '  HTTP_PROXY: "%(proxy)s"\n'
-                  '  http_proxy: "%(proxy)s"\n'
-                  '  NO_PROXY: "{{ no_proxy_env }}"\n'
-                  '  no_proxy: "{{ no_proxy_env }}"')
-                 % {'proxy': r.complete['http-proxy'],
-                    'local': local_servers}),
-                **kwargs)
-            )
+        if r.complete['osa-branch'] == 'stable/mitaka':
+            nextsteps.append(
+                steps.FileAppendStep(
+                    'proxy-environment-via-ansible',
+                    '/etc/openstack_deploy/user_variables.yml',
+                    (('\n\n'
+                      'no_proxy_env: "%(local)s,{{ '
+                      'internal_lb_vip_address }},{{ external_lb_vip_address }},'
+                      '{%% for host in groups[\'all_containers\'] %%}'
+                      '{{ hostvars[host][\'container_address\'] }}'
+                      '{%% if not loop.last %%},{%% endif %%}{%% endfor %%}"\n'
+                      'global_environment_variables:\n'
+                      '  HTTPS_PROXY: "%(proxy)s"\n'
+                      '  https_proxy: "%(proxy)s"\n'
+                      '  HTTP_PROXY: "%(proxy)s"\n'
+                      '  http_proxy: "%(proxy)s"\n'
+                      '  NO_PROXY: "{{ no_proxy_env }}"\n'
+                      '  no_proxy: "{{ no_proxy_env }}"')
+                     % {'proxy': r.complete['http-proxy'],
+                        'local': local_servers}),
+                    **kwargs)
+                )
 
     nextsteps.append(
         steps.FileAppendStep(
@@ -271,7 +102,15 @@ def stage7_user_variables(r, **kwargs):
             **kwargs)
         )
 
-    nextsteps.append(steps.PatchStep('lxc-hosts-ucf-non-interactive', **kwargs))
+    if r.complete['osa-branch'] == 'stable/mitaka':
+        nextsteps.append(steps.PatchStep(
+            'lxc-hosts-ucf-non-interactive', **kwargs))
+    elif r.complete['osa-branch'] == 'stable/newton':
+        nextsteps.append(steps.PatchStep(
+            'lxc-hosts-ucf-non-interactive-newton', **kwargs))
+    else:
+        nextsteps.append(steps.PatchStep(
+            'lxc-hosts-ucf-non-interactive-ocata', **kwargs))
 
     # Release specific steps: Mitaka
     if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
@@ -432,7 +271,12 @@ def stage9_final_configuration(r, **kwargs):
 
     if utils.is_ironic(r):
         nextsteps.append(steps.PatchStep('ironic-tftp-address', **kwargs))
-        nextsteps.append(steps.PatchStep('ironic-pxe-options', **kwargs))
+
+        if r.complete['osa-branch'] == 'stable/mitaka':
+            nextsteps.append(steps.PatchStep('ironic-pxe-options', **kwargs))
+        else:
+            nextsteps.append(steps.PatchStep('ironic-pxe-options-newton',
+                                             **kwargs))
 
     return nextsteps
 
@@ -454,13 +298,6 @@ def deploy(screen):
         r.load_dependancy_chain(module.get_steps(r))
         r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    r.load_dependancy_chain(stage5_configure_osa_before_bootstrap(
-            r, **r.kwargs))
-    r.resolve_steps(use_curses=(not ARGS.no_curses))
-
-    r.load_dependancy_chain(stage6_bootstrap(r, **r.kwargs))
-    r.resolve_steps(use_curses=(not ARGS.no_curses))
-
     r.load_dependancy_chain(stage7_user_variables(r, **r.kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
@@ -471,7 +308,7 @@ def deploy(screen):
     r.load_dependancy_chain(stage9_final_configuration(r, **r.kwargs))
     r.resolve_steps(use_curses=(not ARGS.no_curses))
 
-    # The last of the things, run only once
+    # The last of the things
     r.kwargs['max_attempts'] = 3
     r.kwargs['cwd'] = '/opt/openstack-ansible/playbooks'
 
@@ -560,7 +397,7 @@ def deploy(screen):
     r.load_dependancy_chain(
         [steps.SimpleCommandStep(
                 'openstack-details',
-                './helpers/openstack-details',
+                './helpers/openstack-details %s' % r.complete['osa-branch'],
                 **r.kwargs)
         ])
     r.resolve_steps(use_curses=(not ARGS.no_curses))

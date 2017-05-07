@@ -1,6 +1,65 @@
 CHANGES
 =======
 
+* Tweak SSL options to baremetal based on release
+* Make baremetal node listing insecure
+* Handle deprecated command
+* Fix play name typo
+* Use newton's inbuilt proxy
+* Fix missing asterisk
+* Fix step name typo
+* Add missng import
+* Copy ansible proxy settings once they're known
+* Fix silly typo
+* Fix play name
+* Add missing return
+* Fix bracket typo
+* Quick hack to determine where /etc/environment is setup
+* Remove old style stage calls
+* Move bootstrapping to a new style stage
+* Move OSA configuration to new style stages
+* Now sure where this patch came from, this is the newton version
+* 300 seconds is too long for a default retry delay
+* Newton style PXE append params
+* Bump shas
+* Cleanup failed merge in tested.json
+* Newton style non-interactive debian frontends
+* Bump mitaka sha
+* Improvements to the ephyra helper
+* Remove arbitrary long sleep
+* Trying to nail down what causes lxc failures
+* Collect dpkg versions a different way
+* We're truncating reads for shortlived processes, again
+* We're truncating reads for shortlived processes
+* Skip upgrading to see if we're hitting a ubuntu package problem
+* Log what versions of packages we are using
+* Still arguing with LXC
+* Fix patch to patch
+* Tweaks to ephyra tests, and fix api and swift API addresses
+* Verbose isn't helping
+* Fix silly typo
+* kwargs moved and I missed a spot
+* Make ifup verbose
+* Make error steps look like normal steps
+* Fix missing failure tuple
+* Typo fix
+* kwargs are owned by the runner
+* Error handler for LXC networking failures on container creation
+* Get playbook names right
+* Break out setup-hosts to try and work out why its failing to configure interfaces correctly
+* Re-enable ansible debug to track down these setup-hosts failures
+* kwargs moved
+* Move another sed step into a patch
+* Use the same max_attempts as previous steps
+* Fix the two places I missed turning off curses
+* Retry more now that we've split the plays up
+* Add missing patch file
+* Use the ironic network address for TFTP
+* Fix name of debian frontend
+* Patch from /
+* Fix silly error when copying kwargs
+* Move to a more sane way of patching files
+* Try a new way of setting DEBIAN_FRONTEND for ucf
 * Fix bug for skipping caches for local servers
 * Revert "No, we definitely still need a non-interactive apt run"
 * No, we definitely still need a non-interactive apt run
