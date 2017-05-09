@@ -12,4 +12,13 @@
 
 
 def get_steps(r):
-    return []
+    nextsteps = []
+
+    nextsteps.append(
+        steps.SimpleCommandStep(
+            'setup-ephyra',
+            './helpers/setup-ephyra',
+            **r.kwargs)
+        )
+
+    return nextsteps
