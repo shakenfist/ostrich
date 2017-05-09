@@ -81,7 +81,7 @@ fi
 
 # Boot an instance
 image=`$OS_CMD glance image-list | grep cirros | cut -f 2 -d " "`
-$OS_CMD nova boot --flavor bm --image $image foo
+$OS_CMD nova boot --flavor bm --image $image ephyra-test-$$
 
 # Watch the instance booting
 for i in `seq 10`
@@ -95,4 +95,11 @@ do
   sleep 30
 done
 
-# Ironic conductor logs for the boot
+# If we have a running instance, we have a winner
+if [ `$OS_CMD nova list | grep -v ERROR | grep -c ephyra-test-$$` -gt 0 ]
+then
+  echo "Instance booted, success"
+else
+  echo "Instance failed to boot, failure"
+  exit 1
+fi
