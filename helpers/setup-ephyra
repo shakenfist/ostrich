@@ -1,5 +1,7 @@
 #!/bin/bash -ex
 
+# $1 is the release branch (stable/mitaka, etc)
+
 # These tests only make sense in my lab, because you have to have my physical
 # machines with my local IPMI config. Oh, and ephyra isn't open source.
 
@@ -8,11 +10,13 @@ HTTP_PROXY=""
 https_proxy=""
 HTTPS_PROXY=""
 
+RELEASE_NAME=`echo $1 | cut -f 2 -d "/"`
+
 # Fetch IPAs
 for impl in buildroot tinyipa coreos
 do
-  wget http://192.168.50.1/ipa/${impl}-mitaka.cpio.gz
-  wget http://192.168.50.1/ipa/${impl}-mitaka.vmlinuz
+  wget http://192.168.50.1/ipa/${impl}-${RELEASE_NAME}.cpio.gz
+  wget http://192.168.50.1/ipa/${impl}-${RELEASE_NAME}.vmlinuz
 done
 
 # Source openrc
@@ -42,10 +46,10 @@ do
     $OS_CMD nova flavor-delete bm || true
 
     # Bootstrap the deploy kernel
-    $EPHYRA upload-image --filename ${impl}-mitaka.vmlinuz \
+    $EPHYRA upload-image --filename ${impl}-${RELEASE_NAME}.vmlinuz \
         --name deploy-vmlinuz --disk-format aki --container-format aki \
         envvars:RegionOne
-    $EPHYRA upload-image --filename ${impl}-mitaka.cpio.gz \
+    $EPHYRA upload-image --filename ${impl}-${RELEASE_NAME}.cpio.gz \
         --name deploy-initrd --disk-format ari --container-format ari \
         envvars:RegionOne
 
@@ -95,4 +99,5 @@ do
     fi
 done
 
+echo "No IPAs worked, failure"
 exit 1
