@@ -15,8 +15,8 @@ RELEASE_NAME=`echo $1 | cut -f 2 -d "/"`
 # Fetch IPAs
 for impl in buildroot tinyipa coreos
 do
-  wget http://192.168.50.1/ipa/${impl}-${RELEASE_NAME}.cpio.gz
-  wget http://192.168.50.1/ipa/${impl}-${RELEASE_NAME}.vmlinuz
+  wget http://192.168.50.1/ipa/${impl}-${RELEASE_NAME}.cpio.gz -O ${impl}-${RELEASE_NAME}.cpio.gz
+  wget http://192.168.50.1/ipa/${impl}-${RELEASE_NAME}.vmlinuz -O ${impl}-${RELEASE_NAME}.vmlinuz
 done
 
 # Source openrc
@@ -29,7 +29,7 @@ OS_CMD="/opt/openstack-ansible/scripts/os-cmd"
 for impl in buildroot tinyipa coreos
 do
     # Return us to a clean state
-    for name in deploy-initrd deploy-vmlinuz cirros
+    for name in deploy-initrd deploy-vmlinuz cirros ubuntu
     do
         for image in `$OS_CMD glance image-list | grep $name | cut -f 2 -d " "`
         do
@@ -58,11 +58,15 @@ do
 
     # This needs to be done from the utility container because ephyra doesn't
     # set the CPU property yet
-    $OS_CMD wget http://192.168.50.1/cirros/cirros-0.3.4-x86_64-disk.img \
-        -O /tmp/cirros.img
-    $OS_CMD glance image-create --name cirros --visibility public \
-        --disk-format qcow2 --container-format bare --file /tmp/cirros.img \
-        --property hypervisor_type='baremetal' --property cpu_arch='x86_64'
+    for image in cirros-0.3.4-x86_64-disk.img ubuntu-2017-05-12-10-28.qcow2
+    do
+        shortname=`echo $image | cut -f 1 -d "-"`
+
+        $OS_CMD wget http://192.168.50.1/images/$image -O /tmp/$image
+        $OS_CMD glance image-create --name $shortname --visibility public \
+            --disk-format qcow2 --container-format bare --file /tmp/$image \
+            --property hypervisor_type='baremetal' --property cpu_arch='x86_64'
+    done
 
     # Create flavors
     $OS_CMD nova flavor-create bm auto 16384 1022 2
@@ -83,7 +87,7 @@ do
     fi
 
     # Boot an instance
-    image=`$OS_CMD glance image-list | grep cirros | cut -f 2 -d " "`
+    image=`$OS_CMD glance image-list | grep ubuntu | cut -f 2 -d " "`
     $OS_CMD nova boot --flavor bm --image $image ephyra-test-$$
 
     # Wait
