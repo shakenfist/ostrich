@@ -45,7 +45,7 @@ def get_steps(r):
             '/etc/ansible',
             '.*\.(ini|yml)$',
             replacements,
-            **kwargs))
+            **r.kwargs))
 
     # Release specific steps: Mitaka
     if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
@@ -54,16 +54,16 @@ def get_steps(r):
                 'enable-ironic-environment-mitaka',
                 'etc/openstack_deploy/env.d/ironic.yml',
                 '/etc/openstack_deploy/env.d/ironic.yml',
-                **kwargs)
+                **r.kwargs)
             )
 
     if utils.is_ironic(r):
-        nextsteps.append(steps.PatchStep('ironic-tftp-address', **kwargs))
+        nextsteps.append(steps.PatchStep('ironic-tftp-address', **r.kwargs))
 
         if r.complete['osa-branch'] == 'stable/mitaka':
-            nextsteps.append(steps.PatchStep('ironic-pxe-options', **kwargs))
+            nextsteps.append(steps.PatchStep('ironic-pxe-options', **r.kwargs))
         else:
             nextsteps.append(steps.PatchStep('ironic-pxe-options-newton',
-                                             **kwargs))
+                                             **r.kwargs))
 
     return nextsteps

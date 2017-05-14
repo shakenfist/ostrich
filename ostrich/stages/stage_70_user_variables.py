@@ -45,7 +45,7 @@ def get_steps(r):
                       '  no_proxy: "{{ no_proxy_env }}"')
                      % {'proxy': r.complete['http-proxy'],
                         'local': local_servers}),
-                    **kwargs)
+                    **r.kwargs)
                 )
 
     nextsteps.append(
@@ -53,7 +53,7 @@ def get_steps(r):
             'osa-debug-mode',
             '/etc/openstack_deploy/user_variables.yml',
             '\n\ndebug: true\nverbose: true',
-            **kwargs)
+            **r.kwargs)
         )
 
     nextsteps.append(
@@ -64,25 +64,25 @@ def get_steps(r):
    "--force-confdef";
    "--force-confold";
 }""",
-            **kwargs)
+            **r.kwargs)
         )
 
     nextsteps.append(
         steps.SimpleCommandStep(
             'lxc-hosts-apt-keep-configs-enable',
             """sed -i -e '/- name: Update container resolvers/ i \\- name: Always keep modified config files\\n  template:\\n    src: apt-keep-configs.j2\\n    dest: "{{ lxc_container_cache_path }}/{{ item.chroot_path }}/etc/apt/apt.conf.d/00apt-keep-configs"\\n  with_items: lxc_container_caches\\n  tags:\\n    - lxc-cache\\n    - lxc-cache-update\\n\\n'  /etc/ansible/roles/lxc_hosts/tasks/lxc_cache_preparation.yml""",
-            **kwargs)
+            **r.kwargs)
         )
 
     if r.complete['osa-branch'] == 'stable/mitaka':
         nextsteps.append(steps.PatchStep(
-            'lxc-hosts-ucf-non-interactive', **kwargs))
+            'lxc-hosts-ucf-non-interactive', **r.kwargs))
     elif r.complete['osa-branch'] == 'stable/newton':
         nextsteps.append(steps.PatchStep(
-            'lxc-hosts-ucf-non-interactive-newton', **kwargs))
+            'lxc-hosts-ucf-non-interactive-newton', **r.kwargs))
     else:
         nextsteps.append(steps.PatchStep(
-            'lxc-hosts-ucf-non-interactive-ocata', **kwargs))
+            'lxc-hosts-ucf-non-interactive-ocata', **r.kwargs))
 
     # Release specific steps: Mitaka
     if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
@@ -91,107 +91,7 @@ def get_steps(r):
                 'enable-ironic',
                 '/etc/openstack_deploy/user_variables.yml',
                 '\n\nnova_virt_type: ironic\n',
-                **kwargs)
+                **r.kwargs)
             )
-
-    return nextsteps
-
-
-def stage8_ironic_networking(r, **kwargs):
-    """Configure all the special things for ironic networking."""
-
-    nextsteps = []
-
-    nextsteps.append(
-        steps.YamlAddElementStep(
-            'add-provider-network',
-            '/etc/openstack_deploy/openstack_user_config.yml',
-            ['global_overrides', 'provider_networks'],
-            {'network':
-                 {'group_binds': ['neutron_linuxbridge_agent',
-                                  'ironic_conductor_container',
-                                  'ironic_api_container'],
-                  'container_bridge': 'br-ironic',
-                  'container_type': 'veth',
-                  'container_interface': 'eth12',
-                  'type': 'flat',
-                  'net_name': 'ironic',
-                  'ip_from_q': 'ironic'
-                  }
-            },
-            **kwargs)
-        )
-
-    nextsteps.append(
-        steps.YamlDeleteElementStep(
-            'delete-provider-network',
-            '/etc/openstack_deploy/openstack_user_config.yml',
-            ['global_overrides', 'provider_networks'],
-            2,
-            **kwargs)
-        )
-
-    net, hosts = utils.expand_ironic_netblock(r)
-
-    nextsteps.append(
-        steps.YamlUpdateElementStep(
-            'configure-external-lb-ip',
-            '/etc/openstack_deploy/openstack_user_config.yml',
-            ['global_overrides'],
-            'external_lb_vip_address',
-            str(hosts[4]),
-            **kwargs)
-        )
-
-    nextsteps.append(
-        steps.YamlUpdateDictionaryStep(
-            'add-network-cidr',
-            '/etc/openstack_deploy/openstack_user_config.yml',
-            ['cidr_networks'],
-            {'ironic': str(net)},
-            **kwargs)
-        )
-
-    nextsteps.append(
-        steps.YamlAddElementStep(
-            'reserve-netblock-start',
-            '/etc/openstack_deploy/openstack_user_config.yml',
-            ['used_ips'],
-            '%s,%s' % (hosts[0], hosts[10]),
-            **kwargs)
-        )
-    nextsteps.append(
-        steps.YamlAddElementStep(
-            'reserve-netblock-end',
-            '/etc/openstack_deploy/openstack_user_config.yml',
-            ['used_ips'],
-            '%s,%s' % (hosts[-10], hosts[-1]),
-            **kwargs)
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'add-ironic-bridge',
-            'brctl addbr br-ironic',
-            **kwargs)
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'add-ironic-bridge-nic',
-            'brctl addif br-ironic eth1',
-            **kwargs)
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'add-ironic-bridge-ip',
-            'ifconfig br-ironic inet %s up' % hosts[4],
-            **kwargs)
-        )
-    nextsteps.append(
-        steps.SimpleCommandStep(
-            'add-ironic-interface-ip',
-            'ifconfig eth1 inet %s up' % hosts[3],
-            **kwargs)
-        )
-    nextsteps.append(steps.PatchStep('ironic-vip-address', **r.kwargs))
 
     return nextsteps
