@@ -14,6 +14,9 @@
 #
 
 
+import ipaddress
+
+
 def is_ironic(r):
     return r.complete['hypervisor'] == 'ironic'
 

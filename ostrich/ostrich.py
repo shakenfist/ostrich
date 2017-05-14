@@ -19,7 +19,6 @@ import argparse
 import copy
 import curses
 import importlib
-import ipaddress
 import os
 import re
 import sys
