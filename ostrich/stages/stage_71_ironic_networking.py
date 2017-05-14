@@ -19,6 +19,9 @@ def get_steps(r):
 
     nextsteps = []
 
+    if not utils.is_ironic(r):
+        return []
+
     nextsteps.append(
         steps.YamlAddElementStep(
             'add-provider-network',
