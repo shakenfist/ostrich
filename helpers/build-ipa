@@ -1,0 +1,26 @@
+#!/bin/bash -ex
+
+# $1 is the release (stable/mitaka)
+
+cd ~
+
+# Setup
+git config --global user.email "noreply@example.com"
+git config --global user.name "Ostrich build"
+
+git clone https://github.com/csmart/ironic-python-agent
+cd ironic-python-agent
+git checkout $1
+git cherry-pick b5aba328aa820cd88374d51c7721a9d3f6b59d83
+cd imagebuild/buildroot
+
+make dependencies
+make fetch
+apt-get install -y flex libdb-dev
+
+# Configure kernel and buildroot
+cp ~/ostrich/helpers/buildroot-kernel-config build/buildroot-ipa/board/openstack/ipa/linux-4.10.6.config
+cp ~/ostrich/helpers/buildroot-config build/output/.config
+
+# And build
+make

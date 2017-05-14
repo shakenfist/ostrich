@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-IPA_TARGET=coreos
+# $1 is the release branch (stable/mitaka, etc)
 
 # These tests only make sense in my lab, because you have to have my physical
 # machines with my local IPMI config. Oh, and ephyra isn't open source.
@@ -10,13 +10,14 @@ HTTP_PROXY=""
 https_proxy=""
 HTTPS_PROXY=""
 
-# Fetch CoreOS IPA images from our local cache
-wget http://192.168.50.1/tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe-stable-mitaka.vmlinuz -O ipa-coreos-mitaka.vmlinuz
-wget http://192.168.50.1/tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe_image-oem-stable-mitaka.cpio.gz -O ipa-coreos-mitaka.cpio.gz
+RELEASE_NAME=`echo $1 | cut -f 2 -d "/"`
 
-# Fetch buildroot IPA images from our local cache
-wget http://192.168.50.1/christophersmart.com/files/mikal/bzImage -O ipa-buildroot-mitaka.vmlinuz
-wget http://192.168.50.1/christophersmart.com/files/mikal/rootfs.cpio.xz -O ipa-buildroot-mitaka.cpio.gz
+# Fetch IPAs
+for impl in buildroot tinyipa coreos
+do
+  wget http://192.168.50.1/ipa/${impl}-${RELEASE_NAME}.cpio.gz -O ${impl}-${RELEASE_NAME}.cpio.gz
+  wget http://192.168.50.1/ipa/${impl}-${RELEASE_NAME}.vmlinuz -O ${impl}-${RELEASE_NAME}.vmlinuz
+done
 
 # Source openrc
 . ~/.ostrich/openrc
@@ -25,81 +26,82 @@ wget http://192.168.50.1/christophersmart.com/files/mikal/rootfs.cpio.xz -O ipa-
 EPHYRA="ephyra -c ~/.ostrich/clouds.yaml -i ~/inventory.yaml -n ~/inventory.yaml"
 OS_CMD="/opt/openstack-ansible/scripts/os-cmd"
 
-# Return us to a clean state
-for name in deploy-initrd deploy-vmlinuz cirros
+for impl in buildroot tinyipa coreos
 do
-    for image in `$OS_CMD glance image-list | grep $name | cut -f 2 -d " "`
+    # Return us to a clean state
+    for name in deploy-initrd deploy-vmlinuz cirros ubuntu
     do
-        $OS_CMD glance image-delete $image
+        for image in `$OS_CMD glance image-list | grep $name | cut -f 2 -d " "`
+        do
+            $OS_CMD glance image-delete $image
+        done
     done
+
+    for instance in `$OS_CMD nova list | grep ephyra | cut -f 2 -d " "`
+    do
+        $OS_CMD nova delete $instance
+    done
+
+    $OS_CMD ironic node-delete lab4 || true
+    $OS_CMD nova flavor-delete bm || true
+
+    # Bootstrap the deploy kernel
+    $EPHYRA upload-image --filename ${impl}-${RELEASE_NAME}.vmlinuz \
+        --name deploy-vmlinuz --disk-format aki --container-format aki \
+        envvars:RegionOne
+    $EPHYRA upload-image --filename ${impl}-${RELEASE_NAME}.cpio.gz \
+        --name deploy-initrd --disk-format ari --container-format ari \
+        envvars:RegionOne
+
+    # Add a node to ironic
+    $EPHYRA gather-nodes envvars:RegionOne
+
+    # This needs to be done from the utility container because ephyra doesn't
+    # set the CPU property yet
+    for image in cirros-0.3.4-x86_64-disk.img ubuntu-2017-05-12-10-28.qcow2
+    do
+        shortname=`echo $image | cut -f 1 -d "-"`
+
+        $OS_CMD wget http://192.168.50.1/images/$image -O /tmp/$image
+        $OS_CMD glance image-create --name $shortname --visibility public \
+            --disk-format qcow2 --container-format bare --file /tmp/$image \
+            --property hypervisor_type='baremetal' --property cpu_arch='x86_64'
+    done
+
+    # Create flavors
+    $OS_CMD nova flavor-create bm auto 16384 1022 2
+    $OS_CMD nova flavor-key bm set cpu_arch=x86_64
+    $OS_CMD ironic node-list
+    $OS_CMD nova hypervisor-list
+
+    # Wait for nova to notice the hypervisor
+    echo "Waiting for nova to notice the new hypervisor"
+    sleep 120
+
+    # Check we have a hypervisor registered
+    node=`sudo $OS_CMD ironic node-list | grep "available" | cut -f 2 -d " "`
+    if [ `$OS_CMD nova hypervisor-list | grep -c $node` != 1 ]
+    then
+        echo "Ironic node not registered as a hypervisor"
+        exit 1
+    fi
+
+    # Boot an instance
+    image=`$OS_CMD glance image-list | grep ubuntu | cut -f 2 -d " "`
+    $OS_CMD nova boot --flavor bm --image $image ephyra-test-$$
+
+    # Wait
+    sleep 600
+
+    # If we have a running instance, we have a winner
+    if [ `$OS_CMD nova list | grep -v ERROR | grep -v spawning | grep -c ephyra-test-$$` -gt 0 ]
+    then
+        echo "Instance booted with $impl, success"
+        exit 0
+    else
+        echo "Instance failed to boot with $impl, failure"
+    fi
 done
 
-for instance in `$OS_CMD nova list | grep foo | cut -f 2 -d " "`
-do
-  $OS_CMD nova delete $instance
-done
-
-$OS_CMD ironic node-delete lab4 || true
-$OS_CMD nova flavor-delete bm || true
-
-# Bootstrap the deploy kernel
-$EPHYRA upload-image --filename ipa-$IPA_TARGET-mitaka.vmlinuz \
-    --name deploy-vmlinuz --disk-format aki --container-format aki \
-    envvars:RegionOne
-$EPHYRA upload-image --filename ipa-$IPA_TARGET-mitaka.cpio.gz \
-    --name deploy-initrd --disk-format ari --container-format ari \
-    envvars:RegionOne
-
-# Add a node to ironic
-$EPHYRA gather-nodes envvars:RegionOne
-
-# This needs to be done from the utility container because ephyra doesn't
-# set the CPU property yet
-$OS_CMD wget http://192.168.50.1/cirros/cirros-0.3.4-x86_64-disk.img \
-    -O /tmp/cirros.img
-$OS_CMD glance image-create --name cirros --visibility public \
-    --disk-format qcow2 --container-format bare --file /tmp/cirros.img \
-    --property hypervisor_type='baremetal' --property cpu_arch='x86_64'
-
-# Create flavors
-$OS_CMD nova flavor-create bm auto 16384 1022 2
-$OS_CMD nova flavor-key bm set cpu_arch=x86_64
-$OS_CMD ironic node-list
-$OS_CMD nova hypervisor-list
-
-# Wait for nova to notice the hypervisor
-echo "Waiting for nova to notice the new hypervisor"
-sleep 120
-
-# Check we have a hypervisor registered
-node=`sudo $OS_CMD ironic node-list | grep "available" | cut -f 2 -d " "`
-if [ `$OS_CMD nova hypervisor-list | grep -c $node` != 1 ]
-then
-    echo "Ironic node not registered as a hypervisor"
-    exit 1
-fi
-
-# Boot an instance
-image=`$OS_CMD glance image-list | grep cirros | cut -f 2 -d " "`
-$OS_CMD nova boot --flavor bm --image $image ephyra-test-$$
-
-# Watch the instance booting
-for i in `seq 10`
-do
-  $OS_CMD nova list
-  echo
-  $OS_CMD ironic node-list
-  echo
-  echo "-----"
-  echo
-  sleep 30
-done
-
-# If we have a running instance, we have a winner
-if [ `$OS_CMD nova list | grep -v ERROR | grep -c ephyra-test-$$` -gt 0 ]
-then
-  echo "Instance booted, success"
-else
-  echo "Instance failed to boot, failure"
-  exit 1
-fi
+echo "No IPAs worked, failure"
+exit 1
