@@ -20,7 +20,7 @@ from ostrich import utils
 def get_steps(r):
     """Setup the environment for the OSA steps."""
 
-    nextxsteps = []
+    nextsteps = []
 
     nextsteps.append(
         steps.KwargsStep(
