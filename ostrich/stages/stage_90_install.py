@@ -11,6 +11,7 @@
 # limitations under the License.
 
 import copy
+import os
 
 from ostrich import steps
 from ostrich import utils
