@@ -11,6 +11,9 @@
 # limitations under the License.
 
 
+from ostrich import steps
+
+
 def get_steps(r):
     nextsteps = []
 

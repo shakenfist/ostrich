@@ -1,6 +1,21 @@
 CHANGES
 =======
 
+* Correct import
+* Fix refactor snafus
+* Move final remainders into stages
+* Add missing import
+* Booting an ironic instance now works
+* Better IPA testing
+* A first attempt at automating an IPA build
+* Try all of the IPAs in order looking for a working one
+* Run setup-ephyra for ephyra test runs
+* Add actual tests to setup-ephyra
+* Placeholders for ephyra testing
+* Tweak non-interactive debian patch of ocata
+* Split on any whitespace
+* The command for mitaka is different for node listing
+* Archive files we patch before and after
 * Tweak SSL options to baremetal based on release
 * Make baremetal node listing insecure
 * Handle deprecated command

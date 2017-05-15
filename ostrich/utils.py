@@ -14,6 +14,9 @@
 #
 
 
+import ipaddress
+
+
 def is_ironic(r):
     return r.complete['hypervisor'] == 'ironic'
 
@@ -25,3 +28,12 @@ def recursive_dictionary_update(d, updates):
         else:
             d[key] = updates[key]
     return d
+
+
+def expand_ironic_netblock(r):
+    net = ipaddress.ip_network(r.complete['ironic-ip-block'])
+    hosts = []
+    for h in net.hosts():
+        hosts.append(str(h))
+
+    return net, hosts
