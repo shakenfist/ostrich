@@ -60,10 +60,10 @@ def get_steps(r):
             {
                 'max-attempts': 1,
                 'env': {
-                    'http_proxy' = None,
-                    'https_proxy' = None,
-                    'HTTP_PROXY' = None,
-                    'HTTPS_PROXY' = None
+                    'http_proxy': None,
+                    'https_proxy': None,
+                    'HTTP_PROXY': None,
+                    'HTTPS_PROXY': None
             },
             **r.kwargs
             )
