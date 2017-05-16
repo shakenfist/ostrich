@@ -58,7 +58,7 @@ def get_steps(r):
             'kwargs-disable-http-proxy',
             r,
             {
-                'max-attempts': 1,
+                'max_attempts': 1,
                 'env': {
                     'http_proxy': '',
                     'https_proxy': '',
