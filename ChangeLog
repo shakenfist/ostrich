@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Unset proxies, instead of using empty strings
 * max_attempts doesn't have a hyphen
 * Apparently environment variables can't be None
 * Add missing brace

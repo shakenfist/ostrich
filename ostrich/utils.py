@@ -27,7 +27,8 @@ def recursive_dictionary_update(d, updates):
             recursive_dictionary_update(d[key], updates[key])
         else:
             if updates[key] is None:
-                del d[key]
+                if key in d:
+                    del d[key]
             else:
                 d[key] = updates[key]
     return d
