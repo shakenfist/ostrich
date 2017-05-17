@@ -112,6 +112,10 @@ def get_steps(r):
             'ifconfig eth1 inet %s up' % hosts[3],
             **r.kwargs)
         )
-    nextsteps.append(steps.PatchStep('ironic-vip-address', **r.kwargs))
+
+    if r.complete['osa-branch'] in ['stable/mitaka', 'stable/newton']:
+        nextsteps.append(steps.PatchStep('ironic-vip-address', **r.kwargs))
+    else:
+        nextsteps.append(steps.PatchStep('ironic-vip-address-ocata', **r.kwargs))
 
     return nextsteps
