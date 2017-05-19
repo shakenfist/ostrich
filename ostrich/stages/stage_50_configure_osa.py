@@ -64,6 +64,7 @@ def get_steps(r):
             )
 
     if r.complete['osa-branch'] != 'stable/mitaka':
+        nextsteps.append(steps.PatchStep('cinder-constraints-mitaka', **r.kwargs))
         nextsteps.append(
             steps.RegexpEditorStep(
                 'ansible-no-loopback-swap',
