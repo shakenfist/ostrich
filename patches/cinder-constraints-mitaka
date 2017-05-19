@@ -1,5 +1,5 @@
---- cinder_install.yml.orig	2017-05-19 14:31:36.577614514 +1000
-+++ cinder_install.yml	2017-05-19 14:32:06.137967420 +1000
+--- /etc/ansible/roles/os_cinder/tasks/cinder_install.yml	2017-05-19 14:31:36.577614514 +1000
++++ /etc/ansible/roles/os_cinder/tasks/cinder_install.yml	2017-05-19 14:32:06.137967420 +1000
 @@ -56,7 +56,7 @@
  
  - name: Set pip_install_options_fact when not in developer mode
