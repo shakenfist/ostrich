@@ -198,7 +198,7 @@ class PatchStep(SimpleCommandStep):
 
         super(PatchStep, self).__init__(
             name,
-            'patch -d / -p 1 < patches/%s' % name,
+            'patch -d / -p 1 -v < patches/%s' % name,
             **self.local_kwargs)
 
     def _archive_files(self, stage):
