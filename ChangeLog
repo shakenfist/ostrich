@@ -1,6 +1,18 @@
 CHANGES
 =======
 
+* Unset proxies, instead of using empty strings
+* max_attempts doesn't have a hyphen
+* Apparently environment variables can't be None
+* Add missing brace
+* Correct dictionary syntax
+* Fix typo
+* Cleanup refactor errors
+* Fix missing import
+* Fix missing import
+* Fix ordering of steps error with ephyra steps
+* Remove old style method calls
+* Fix another missing import
 * Correct import
 * Fix refactor snafus
 * Move final remainders into stages

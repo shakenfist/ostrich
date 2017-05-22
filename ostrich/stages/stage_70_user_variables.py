@@ -77,6 +77,7 @@ def get_steps(r):
     if r.complete['osa-branch'] == 'stable/mitaka':
         nextsteps.append(steps.PatchStep(
             'lxc-hosts-ucf-non-interactive', **r.kwargs))
+        nextsteps.append(steps.PatchStep('cinder-constraints-mitaka', **r.kwargs))
     elif r.complete['osa-branch'] == 'stable/newton':
         nextsteps.append(steps.PatchStep(
             'lxc-hosts-ucf-non-interactive-newton', **r.kwargs))

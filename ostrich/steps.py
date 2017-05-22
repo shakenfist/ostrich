@@ -90,6 +90,9 @@ class SimpleCommandStep(Step):
         self.env = os.environ
         self.env.update(kwargs.get('env'))
 
+        self.acceptable_exit_codes = kwargs.get(
+            'acceptable_exit_codes', [0])
+
     def _output_analysis(self, d):
         pass
 
@@ -144,7 +147,7 @@ class SimpleCommandStep(Step):
         emit.emit('... process complete')
         returncode = obj.returncode
         emit.emit('... exit code %d' % returncode)
-        return returncode == 0
+        return returncode in self.acceptable_exit_codes
 
 
 EXECUTION_RE = re.compile('^\[Executing "(.*)" playbook\]$')
@@ -186,6 +189,7 @@ class PatchStep(SimpleCommandStep):
     def __init__(self, name, **kwargs):
         self.local_kwargs = copy.copy(kwargs)
         self.local_kwargs['cwd'] = __file__.replace('ostrich/steps.py', '')
+        self.local_kwargs['acceptable_exit_codes'] = [0]
 
         self.archive_path = os.path.expanduser('~/.ostrich')
 
@@ -198,7 +202,7 @@ class PatchStep(SimpleCommandStep):
 
         super(PatchStep, self).__init__(
             name,
-            'patch -d / -p 1 < patches/%s' % name,
+            'patch -d / -p 1 -v < patches/%s' % name,
             **self.local_kwargs)
 
     def _archive_files(self, stage):

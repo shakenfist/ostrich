@@ -26,7 +26,11 @@ def recursive_dictionary_update(d, updates):
         if key in d and type(d[key]) is dict:
             recursive_dictionary_update(d[key], updates[key])
         else:
-            d[key] = updates[key]
+            if updates[key] is None:
+                if key in d:
+                    del d[key]
+            else:
+                d[key] = updates[key]
     return d
 
 

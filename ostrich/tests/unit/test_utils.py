@@ -50,3 +50,15 @@ class UtilsTestCase(base.BaseTestCase):
         b = {'a': 1, 'b': {'a': 1, 'b': 2}}
         c = utils.recursive_dictionary_update(a, b)
         self.assertEquals({'a': 1, 'b': {'a': 1, 'b': 2, 'c': 3}, 'c': 3}, c)
+
+    def test_recursive_dictionary_update_unset(self):
+        a = {'a': 1, 'b': {'a': 1, 'b': 2, 'c': 3}, 'c': 3}
+        b = {'b': {'a': None}}
+        c = utils.recursive_dictionary_update(a, b)
+        self.assertEquals({'a': 1, 'b': {'b': 2, 'c': 3}, 'c': 3}, c)
+
+    def test_recursive_dictionary_update_unset_missing(self):
+        a = {'a': 1, 'b': {'a': 1, 'b': 2, 'c': 3}, 'c': 3}
+        b = {'b': {'z': None}}
+        c = utils.recursive_dictionary_update(a, b)
+        self.assertEquals({'a': 1, 'b': {'a': 1, 'b': 2, 'c': 3}, 'c': 3}, c)
