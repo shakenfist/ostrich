@@ -352,6 +352,7 @@ class YamlAddElementStep(Step):
         sub = y
 
         for key in self.target_element_path:
+            print key
             sub = sub[key]
 
         sub.append(self.data)

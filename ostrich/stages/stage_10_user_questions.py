@@ -92,4 +92,15 @@ def get_steps(r):
             **r.kwargs
             )
         )
+    nextsteps.append(
+        steps.QuestionStep(
+            'enable-ceph',
+            'Ceph support',
+            ('Would you like to deploy ceph as well? If so, answer "yes" '
+             'here'),
+            'Ceph support',
+            **r.kwargs
+            )
+        )
+
     return nextsteps
