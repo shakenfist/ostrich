@@ -50,7 +50,7 @@ def get_steps(r):
             pass
         else:
             steps.YamlAddElementStep(
-                'enable-ironic-aio',
+                'enable-ceph-aio',
                 'tests/bootstrap-aio.yml',
                 [0, 'vars', 'confd_overrides', 'aio'],
                 'name: ceph.yml.aio',
