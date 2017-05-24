@@ -54,7 +54,7 @@ def get_steps(r):
                     'enable-ceph-aio',
                     'tests/bootstrap-aio.yml',
                     [0, 'vars', 'confd_overrides', 'aio'],
-                    'name: ceph.yml.aio',
+                    {'name': 'ceph.yml.aio'},
                     **r.kwargs
                 )
             )
@@ -68,7 +68,7 @@ def get_steps(r):
                     'enable-ironic-aio',
                     'tests/bootstrap-aio.yml',
                     [0, 'vars', 'confd_overrides', 'aio'],
-                    'name: ironic.yml.aio',
+                    {'name': 'ironic.yml.aio'},
                     **r.kwargs
                 )
             )
