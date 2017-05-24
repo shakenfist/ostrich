@@ -49,24 +49,28 @@ def get_steps(r):
             # This isn't implemented for these releases
             pass
         else:
-            steps.YamlAddElementStep(
-                'enable-ceph-aio',
-                'tests/bootstrap-aio.yml',
-                [0, 'vars', 'confd_overrides', 'aio'],
-                'name: ceph.yml.aio',
-                **r.kwargs
+            nextsteps.append(
+                steps.YamlAddElementStep(
+                    'enable-ceph-aio',
+                    'tests/bootstrap-aio.yml',
+                    [0, 'vars', 'confd_overrides', 'aio'],
+                    'name: ceph.yml.aio',
+                    **r.kwargs
+                )
             )
 
     if utils.is_ironic(r):
         if r.complete['osa-branch'] == 'stable/mitaka':
             nextsteps.append(steps.PatchStep('ironic-aio-mitaka', **r.kwargs))
         else:
-            steps.YamlAddElementStep(
-                'enable-ironic-aio',
-                'tests/bootstrap-aio.yml',
-                [0, 'vars', 'confd_overrides', 'aio'],
-                'name: ironic.yml.aio',
-                **r.kwargs
+            nextsteps.append(
+                steps.YamlAddElementStep(
+                    'enable-ironic-aio',
+                    'tests/bootstrap-aio.yml',
+                    [0, 'vars', 'confd_overrides', 'aio'],
+                    'name: ironic.yml.aio',
+                    **r.kwargs
+                )
             )
 
         nextsteps.append(
