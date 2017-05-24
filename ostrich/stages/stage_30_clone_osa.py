@@ -15,7 +15,7 @@ from ostrich import utils
 
 
 def _ansible_debug(r):
-    if r.complete['ansbile-debug'] == 'yes':
+    if r.complete['ansible-debug'] == 'yes':
         return 1
     return 0
 
