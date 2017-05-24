@@ -14,6 +14,12 @@ from ostrich import steps
 from ostrich import utils
 
 
+def _ansible_debug(r):
+    if r.complete['ansbile-debug'] == 'yes':
+        return 1
+    return 0
+
+
 def get_steps(r):
     """Clone OSA."""
 
@@ -35,7 +41,7 @@ def get_steps(r):
                 'cwd': '/opt/openstack-ansible',
                 'env': {
                     'ANSIBLE_ROLE_FETCH_MODE': 'git-clone',
-                    'ANSIBLE_DEBUG': '1',
+                    'ANSIBLE_DEBUG': _ansible_debug(r),
                     'ANSIBLE_KEEP_REMOTE_FILES': '1'
                 }
             },

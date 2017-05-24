@@ -102,5 +102,16 @@ def get_steps(r):
             **r.kwargs
             )
         )
+    nextsteps.append(
+        steps.QuestionStep(
+            'ansible-debug',
+            'Enable ansible debugging mode?',
+            ('Do you want to enable ansible debugging mode? This produces a '
+             'of extra, hard to read output. However, it is useful in '
+             'debugging some issues. To enable debug mode, answer "yes".'),
+            'Ansible debugging',
+            **r.kwargs
+            )
+        )
 
     return nextsteps
