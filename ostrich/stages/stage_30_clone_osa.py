@@ -16,8 +16,8 @@ from ostrich import utils
 
 def _ansible_debug(r):
     if r.complete['ansible-debug'] == 'yes':
-        return 1
-    return 0
+        return '1'
+    return '0'
 
 
 def get_steps(r):
