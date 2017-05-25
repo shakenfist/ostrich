@@ -74,16 +74,28 @@ def get_steps(r):
             **r.kwargs)
         )
 
+    # Make updates non-interactive
     if r.complete['osa-branch'] == 'stable/mitaka':
         nextsteps.append(steps.PatchStep(
             'lxc-hosts-ucf-non-interactive', **r.kwargs))
-        nextsteps.append(steps.PatchStep('cinder-constraints-mitaka', **r.kwargs))
+        nextsteps.append(steps.PatchStep(
+            'cinder-constraints-mitaka', **r.kwargs))
     elif r.complete['osa-branch'] == 'stable/newton':
         nextsteps.append(steps.PatchStep(
             'lxc-hosts-ucf-non-interactive-newton', **r.kwargs))
     else:
         nextsteps.append(steps.PatchStep(
             'lxc-hosts-ucf-non-interactive-ocata', **r.kwargs))
+
+    # Patch ceph role to work
+    if r.complete['enable-ceph'] == 'yes':
+        if r.complete['osa-branch'] in ['stable/mitaka',
+                                        'stable/newton']:
+            # This isn't implemented for these releases
+            pass
+        else:
+            nextsteps.append(steps.PatchStep(
+                'ceph-global-pg_num', **r.kwargs))
 
     # Release specific steps: Mitaka
     if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
