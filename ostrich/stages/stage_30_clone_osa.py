@@ -63,4 +63,23 @@ def get_steps(r):
                 )
             )
 
+    if r.complete['enable-ceph'] == 'yes':
+        if r.complete['osa-branch'] in ['stable/mitaka',
+                                        'stable/newton']:
+            # This isn't implemented for these releases
+            pass
+        else:
+            nextsteps.append(
+                steps.KwargsStep(
+                    'kwargs-ceph',
+                    r,
+                    {
+                        'env': {
+                            'SCENARIO': 'ceph'
+                        }
+                    },
+                    **r.kwargs
+                    )
+                )
+
     return nextsteps

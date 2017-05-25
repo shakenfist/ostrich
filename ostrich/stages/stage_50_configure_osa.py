@@ -65,9 +65,17 @@ def get_steps(r):
         else:
             nextsteps.append(
                 steps.YamlAddElementStep(
-                    'enable-ironic-aio',
+                    'enable-ironic-aio-scenario',
                     'tests/bootstrap-aio.yml',
                     [0, 'vars', 'confd_overrides', 'aio'],
+                    {'name': 'ironic.yml.aio'},
+                    **r.kwargs
+                )
+            )
+                steps.YamlAddElementStep(
+                    'enable-ironic-ceph-scenario',
+                    'tests/bootstrap-aio.yml',
+                    [0, 'vars', 'confd_overrides', 'ceph'],
                     {'name': 'ironic.yml.aio'},
                     **r.kwargs
                 )
