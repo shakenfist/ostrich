@@ -188,7 +188,7 @@ class AnsibleTimingSimpleCommandStep(SimpleCommandStep):
 class PatchStep(SimpleCommandStep):
     def __init__(self, name, **kwargs):
         self.local_kwargs = copy.copy(kwargs)
-        self.local_kwargs['cwd'] = __file__.replace('ostrich/steps.py', '')
+        self.local_kwargs['cwd'] = __file__.replace('/ostrich/steps.py', '')
         self.local_kwargs['acceptable_exit_codes'] = [0]
 
         self.archive_path = os.path.expanduser('~/.ostrich')
