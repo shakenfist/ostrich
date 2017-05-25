@@ -43,22 +43,6 @@ def get_steps(r):
                 **r.kwargs)
             )
 
-    if r.complete['enable-ceph'] == 'yes':
-        if r.complete['osa-branch'] in ['stable/mitaka',
-                                        'stable/newton']:
-            # This isn't implemented for these releases
-            pass
-        else:
-            nextsteps.append(
-                steps.YamlAddElementStep(
-                    'enable-ceph-aio',
-                    'tests/bootstrap-aio.yml',
-                    [0, 'vars', 'confd_overrides', 'aio'],
-                    {'name': 'ceph.yml.aio'},
-                    **r.kwargs
-                )
-            )
-
     if utils.is_ironic(r):
         if r.complete['osa-branch'] == 'stable/mitaka':
             nextsteps.append(steps.PatchStep('ironic-aio-mitaka', **r.kwargs))
@@ -72,6 +56,7 @@ def get_steps(r):
                     **r.kwargs
                 )
             )
+            nextsteps.append(
                 steps.YamlAddElementStep(
                     'enable-ironic-ceph-scenario',
                     'tests/bootstrap-aio.yml',
