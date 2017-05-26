@@ -67,14 +67,4 @@ def get_steps(r):
             nextsteps.append(steps.PatchStep('ironic-pxe-options-newton',
                                              **r.kwargs))
 
-    # Patch ceph role to work
-    if r.complete['enable-ceph'] == 'yes':
-        if r.complete['osa-branch'] in ['stable/mitaka',
-                                        'stable/newton']:
-            # This isn't implemented for these releases
-            pass
-        else:
-            nextsteps.append(steps.PatchStep(
-                'ceph-global-pg_num', **r.kwargs))
-
     return nextsteps
