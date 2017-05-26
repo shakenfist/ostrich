@@ -1,0 +1,21 @@
+--- /etc/ansible/roles/ceph.ceph-common/defaults/main.yml	2017-05-26 08:55:07.803635173 +1000
++++ /etc/ansible/roles/ceph.ceph-common/defaults/main.yml	2017-05-26 08:58:30.417019878 +1000
+@@ -338,7 +338,9 @@
+ #     foo: 1234
+ #     bar: 5678
+ #
+-ceph_conf_overrides: {}
++ceph_conf_overrides:
++  global:
++    osd_pool_default_pg_num: 8
+ 
+ 
+ #############
+@@ -373,4 +375,4 @@
+ # Set this to true to enable File access via NFS.  Requires an MDS role.
+ nfs_file_gw: true
+ # Set this to true to enable Object access via NFS. Requires an RGW role.
+-nfs_obj_gw: false
+\ No newline at end of file
++nfs_obj_gw: false
+

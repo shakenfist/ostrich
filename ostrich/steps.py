@@ -188,8 +188,8 @@ class AnsibleTimingSimpleCommandStep(SimpleCommandStep):
 class PatchStep(SimpleCommandStep):
     def __init__(self, name, **kwargs):
         self.local_kwargs = copy.copy(kwargs)
-        self.local_kwargs['cwd'] = __file__.replace('ostrich/steps.py', '')
-        self.local_kwargs['acceptable_exit_codes'] = [0]
+        self.local_kwargs['cwd'] = __file__.replace('/ostrich/steps.py', '')
+        self.local_kwargs['acceptable_exit_codes'] = [0, 1]
 
         self.archive_path = os.path.expanduser('~/.ostrich')
 
@@ -202,7 +202,7 @@ class PatchStep(SimpleCommandStep):
 
         super(PatchStep, self).__init__(
             name,
-            'patch -d / -p 1 -v < patches/%s' % name,
+            'patch -d / -p 1 --verbose < patches/%s' % name,
             **self.local_kwargs)
 
     def _archive_files(self, stage):
@@ -352,6 +352,7 @@ class YamlAddElementStep(Step):
         sub = y
 
         for key in self.target_element_path:
+            print key
             sub = sub[key]
 
         sub.append(self.data)

@@ -48,12 +48,23 @@ def get_steps(r):
             nextsteps.append(steps.PatchStep('ironic-aio-mitaka', **r.kwargs))
         else:
             nextsteps.append(
-                steps.SimpleCommandStep(
-                    'fixup-add-ironic-newton',
-                    ('sed -i -e "/- name: heat.yml.aio/ a \        '
-                     '- name: ironic.yml.aio"  tests/bootstrap-aio.yml'),
-                    **r.kwargs)
+                steps.YamlAddElementStep(
+                    'enable-ironic-aio-scenario',
+                    'tests/bootstrap-aio.yml',
+                    [0, 'vars', 'confd_overrides', 'aio'],
+                    {'name': 'ironic.yml.aio'},
+                    **r.kwargs
                 )
+            )
+            nextsteps.append(
+                steps.YamlAddElementStep(
+                    'enable-ironic-ceph-scenario',
+                    'tests/bootstrap-aio.yml',
+                    [0, 'vars', 'confd_overrides', 'ceph'],
+                    {'name': 'ironic.yml.aio'},
+                    **r.kwargs
+                )
+            )
 
         nextsteps.append(
             steps.FileAppendStep(
