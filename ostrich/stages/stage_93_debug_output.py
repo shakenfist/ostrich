@@ -30,6 +30,14 @@ def get_steps(r):
         )
 
     if utils.is_ironic(r):
+        nextsteps.append(
+            steps.SimpleCommandStep(
+                   'openstack-details-ironic',
+                   ('./helpers/openstack-details-ironic %s'
+                    % r.complete['osa-branch']),
+                   **r.kwargs)
+            )
+
         net, hosts = utils.expand_ironic_netblock(r)
         nextsteps.append(
             steps.SimpleCommandStep(
