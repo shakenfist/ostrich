@@ -56,15 +56,21 @@ def get_steps(r):
                     **r.kwargs
                 )
             )
-            nextsteps.append(
-                steps.YamlAddElementStep(
-                    'enable-ironic-ceph-scenario',
-                    'tests/bootstrap-aio.yml',
-                    [0, 'vars', 'confd_overrides', 'ceph'],
-                    {'name': 'ironic.yml.aio'},
-                    **r.kwargs
+
+            if r.complete['osa-branch'] in ['stable/mitaka',
+                                            'stable/newton']:
+                # This isn't implemented for these releases
+                pass
+            else:
+                nextsteps.append(
+                    steps.YamlAddElementStep(
+                        'enable-ironic-ceph-scenario',
+                        'tests/bootstrap-aio.yml',
+                        [0, 'vars', 'confd_overrides', 'ceph'],
+                        {'name': 'ironic.yml.aio'},
+                        **r.kwargs
+                    )
                 )
-            )
 
         nextsteps.append(
             steps.FileAppendStep(
