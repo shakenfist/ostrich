@@ -107,4 +107,9 @@ def get_steps(r):
                 **r.kwargs)
             )
 
+    # Turn on agent logging in ironic
+    if utils.is_ironic(r):
+        nextsteps.append(steps.PatchStep(
+                'ironic-agent-logs', **r.kwargs))
+
     return nextsteps

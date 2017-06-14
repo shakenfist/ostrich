@@ -21,6 +21,14 @@ done
 
 # Source openrc
 . ~/.ostrich/openrc
+export OS_CACERT=/etc/ssl/certs/haproxy.cert
+
+# For some reason the nova-compute in the ironic nova-compute container doesn't
+# come up clearly on first start
+for container in `lxc-ls -1 | grep aio1_ironic_compute_container`
+do
+  lxc-attach -n $container systemctl restart nova-compute
+done
 
 # Shortcuts
 EPHYRA="ephyra -c ~/.ostrich/clouds.yaml -i ~/inventory.yaml -n ~/inventory.yaml"

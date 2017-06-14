@@ -1,0 +1,12 @@
+--- /etc/ansible/roles/os_ironic/templates/ironic.conf.j2      2017-06-13 18:35:54.428566725 +1000
++++ /etc/ansible/roles/os_ironic/templates/ironic.conf.j2      2017-06-13 18:36:04.072652227 +1000
+@@ -14,6 +14,9 @@
+ default_network_interface = {{ ironic_default_network_interface }}
+ 
+ [agent]
++deploy_logs_collect = always
++deploy_logs_storage_backend = local
++deploy_logs_local_path = /var/log/ironic/deploy
+ 
+ [amt]
+
