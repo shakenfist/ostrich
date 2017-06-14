@@ -5,7 +5,7 @@
  
  [conductor]
 -api_url = {{ ironic_api_url }}
-+api_url = http://{{ external_lb_vip_address}}:6385
++api_url = https://{{ external_lb_vip_address}}:6385
  sync_power_state_interval = {{ ironic_sync_power_state_interval }}
  automated_clean = {{ ironic_automated_clean }}
  
@@ -14,7 +14,7 @@
  swift_temp_url_key = {{ ironic_swift_temp_url_secret_key }}
  swift_container = {{ ironic_swift_image_container }}
 -swift_endpoint_url = {{ ironic_swift_endpoint }}
-+swift_endpoint_url = http://{{ external_lb_vip_address }}:8080
++swift_endpoint_url = https://{{ external_lb_vip_address }}:8080
  swift_account = {{ ironic_swift_auth_account }}
  swift_api_version = {{ ironic_swift_api_version }}
  temp_url_endpoint_type = swift
