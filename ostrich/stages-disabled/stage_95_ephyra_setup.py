@@ -20,7 +20,7 @@ def get_steps(r):
     nextsteps.append(
         steps.SimpleCommandStep(
             'setup-ephyra',
-            './helpers/setup-ephyra',
+            './helpers/setup-ephyra %s' % r.complete['osa-branch'],
             **r.kwargs)
         )
 
