@@ -113,5 +113,15 @@ def get_steps(r):
             **r.kwargs
             )
         )
+    nextsteps.append(
+        steps.QuestionStep(
+            'trace-processes',
+            'Trace processes that are run?',
+            ('Do you want to see a complete set of processes that are run '
+             'as part of the install? If so, answer "yes" here.'),
+            'Process tracing',
+            **r.kwargs
+            )
+        )
 
     return nextsteps

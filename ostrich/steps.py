@@ -129,15 +129,17 @@ class SimpleCommandStep(Step):
                     seen.append(child.pid)
                     if child.pid not in procs:
                         procs[child.pid] = ' '.join(child.cmdline())
-                        emit.emit('*** process started *** %d -> %s'
-                                  % (child.pid, procs[child.pid]))
+                        if r.complete['trace-processes'] == 'yes':
+                            emit.emit('*** process started *** %d -> %s'
+                                      % (child.pid, procs[child.pid]))
                 except psutil.NoSuchProcess:
                     pass
 
             ended = []
             for pid in procs:
                 if pid not in seen:
-                    emit.emit('*** process ended *** %d -> %s'
+                    if r.complete['trace-processes'] == 'yes':
+                        emit.emit('*** process ended *** %d -> %s'
                               % (pid, procs.get(child.pid, '???')))
                     ended.append(pid)
 
