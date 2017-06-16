@@ -86,6 +86,7 @@ class SimpleCommandStep(Step):
         super(SimpleCommandStep, self).__init__(name, **kwargs)
         self.command = command
         self.cwd = kwargs.get('cwd')
+        self.trace_processes = kwargs.get('trace_processes', False)
 
         self.env = os.environ
         self.env.update(kwargs.get('env'))
@@ -129,7 +130,7 @@ class SimpleCommandStep(Step):
                     seen.append(child.pid)
                     if child.pid not in procs:
                         procs[child.pid] = ' '.join(child.cmdline())
-                        if r.complete['trace-processes'] == 'yes':
+                        if self.trace_processes:
                             emit.emit('*** process started *** %d -> %s'
                                       % (child.pid, procs[child.pid]))
                 except psutil.NoSuchProcess:
@@ -138,7 +139,7 @@ class SimpleCommandStep(Step):
             ended = []
             for pid in procs:
                 if pid not in seen:
-                    if r.complete['trace-processes'] == 'yes':
+                    if self.trace_processes:
                         emit.emit('*** process ended *** %d -> %s'
                               % (pid, procs.get(child.pid, '???')))
                     ended.append(pid)
