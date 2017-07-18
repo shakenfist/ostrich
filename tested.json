@@ -1,6 +1,6 @@
 {
     "stable/mitaka": "fbafe397808ef3ee3447fe8fefa6ac7e5c6ff144",
-    "stable/newton": "b0f9cfdd992d6db15a5a8a55f592b572c17166af",
-    "stable/ocata":  "3ed4d0e0db8c1280a46aa6b3ab8f8891f080d2d4",
-    "master":        "96cfe51d420ec56709033719d689b23935756c9d"
+    "stable/newton": "81526add4fbd0321a97bf479a734d23ed0d3638a",
+    "stable/ocata":  "d2dbea9835b8ffe2523a1cd90fa3d2d004632212",
+    "master":        "51f5c15898ba191dfcc95804ff69211160fb9238"
 }
