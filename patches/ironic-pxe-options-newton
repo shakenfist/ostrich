@@ -6,4 +6,4 @@
  # pxe boot
 -ironic_pxe_append_params: "ipa-debug=1 systemd.journald.forward_to_console=yes"
 \ No newline at end of file
-+ironic_pxe_append_params: "ipa-debug=1 systemd.journald.forward_to_console=yes coreos.autologin"
++ironic_pxe_append_params: "ipa-debug=1 ipa-insecure=1 systemd.journald.forward_to_console=yes coreos.autologin"

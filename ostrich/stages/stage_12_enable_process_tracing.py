@@ -10,18 +10,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from ostrich import steps
+from ostrich import utils
 
 
 def get_steps(r):
+    """Turn process tracing on, maybe."""
+
     nextsteps = []
-
     nextsteps.append(
-        steps.SimpleCommandStep(
-            'setup-ephyra',
-            './helpers/setup-ephyra %s' % r.complete['osa-branch'],
-            **r.kwargs)
+        steps.KwargsStep(
+            'kwargs-trace-processes',
+            r,
+            {
+                'trace_processes': r.complete['trace-processes']
+            },
+            **r.kwargs
+            )
         )
-
     return nextsteps
