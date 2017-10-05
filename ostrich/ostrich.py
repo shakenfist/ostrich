@@ -45,9 +45,10 @@ def deploy(screen):
     # a lot of plumbing.
     for stage_pyname in stage_loader.discover_stages():
         name = stage_pyname.replace('.py', '')
-        module = importlib.import_module('ostrich.stages.%s' % name)
-        r.load_dependancy_chain(module.get_steps(r))
-        r.resolve_steps(use_curses=(not ARGS.no_curses))
+        if name.startswith('stage'):
+            module = importlib.import_module('ostrich.stages.%s' % name)
+            r.load_dependancy_chain(module.get_steps(r))
+            r.resolve_steps(use_curses=(not ARGS.no_curses))
 
     # The last of the things
     r.kwargs['max_attempts'] = 3
