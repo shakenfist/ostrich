@@ -47,6 +47,6 @@ def get_steps(r):
                     **r.kwargs)
                 )
 
-    nextsteps.extend(repeated.configure_proxies('pass-1'))
+    nextsteps.extend(repeated.configure_proxies(r, 'pass-1'))
 
     return nextsteps

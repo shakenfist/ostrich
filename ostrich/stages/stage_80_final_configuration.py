@@ -18,7 +18,7 @@ from ostrich import utils
 def get_steps(r):
     """Final tweaks to configuration before we run the playbooks."""
 
-    nextsteps = repeated.configure_proxies('pass-2')
+    nextsteps = repeated.configure_proxies(r, 'pass-2')
 
     # Release specific steps: Mitaka
     if r.complete['osa-branch'] == 'stable/mitaka' and utils.is_ironic(r):
