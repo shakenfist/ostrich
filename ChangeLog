@@ -1,6 +1,9 @@
 CHANGES
 =======
 
+* Install tempest
+* Remove code which has been moved to stages
+* Fix missing argument
 * Fix missing argument
 * Only load things which are stages
 * De-dup repeated proxy setup
